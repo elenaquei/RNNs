@@ -64,32 +64,37 @@ end
 % Now, we can consider a bigger system!
 % definition of system-specific elements:
 solutions = [];
-for alpha = -1000:0.1:1000
-    if mod(alpha, 10) ==0
+poor_solutions = [];
+W = @(a) [0, 0, a;
+    0, 0, 0;
+    -a, 0, 0];
+dalphaW = @(a) [0, 0, 1;
+    0,0,0;
+    -1,0,0];
+gamma = 0.15;
+phi = [1;2;3];
+dim = 3;
+
+% construction of the Hopf problem based on the just defined elements:
+f = @(x, a) asym_rhs(x, W(a), gamma);
+df = @(x, a) der_RHS(x, W(a), gamma);
+dalphaf = @(x,a) der_alpha_RHS(x, W(a), gamma, dalphaW(a));
+dxalphaf = @(x, a) der_alpha_xRHS(x, W(a), gamma, dalphaW(a));
+dxxfv = @(x, a, v) dir_der2RHS(x, W(a), gamma, v);
+
+% full Hopf problem
+F = @(X) wrapper_Hopf(X, dim, f, df, phi);
+DF = @(X) wrapper_DHopf(X, dim, df, dxxfv, dalphaf, dxalphaf, phi);
+
+X_merge = @(x, alpha, eigenvec_real, eigenvec_imag, eigenval_imag) [x; alpha; eigenvec_real; eigenvec_imag; eigenval_imag];
+
+
+for alpha = -100:0.5:100
+    if mod(alpha, 20) ==0
         fprintf('testing alpha = %f\n', alpha);
     end
     
-    W = @(a) [0, 1, a;
-        -1, 0, 1;
-        -a, -1, 0];
-    dalphaW = @(a) [0, 0, 1;0,0,0;-1,0,0];
-    gamma = 0.15;
-    phi = [1;2;3];
-    dim = 3;
-    %alpha = 0.; % parameter
-    %
-    
-    % construction of the full Hopf problem based on the just defined elements:
-    f = @(x, a) asym_rhs(x, W(a), gamma);
-    df = @(x, a) der_RHS(x, W(a), gamma);
-    dalphaf = @(x,a) der_alpha_RHS(x, W(a), gamma, dalphaW(a));
-    dxalphaf = @(x, a) der_alpha_xRHS(x, W(a), gamma, dalphaW(a));
-    dxxfv = @(x, a, v) dir_der2RHS(x, W(a), gamma, v);
-    x =  rand(size(W(1), 1),1); % system status
-    test = f(x, alpha);
-    testdf = df(x, alpha);
-    
-    % getting a better equilibrium
+    % getting a better equilibrium for the ODE
     x = zeros(size(W(1), 1),1); % system status
     for i = 1:10
         try
@@ -103,15 +108,15 @@ for alpha = -1000:0.1:1000
     if i < 10
         %fprintf('alpha = %f gives a good equilibrium  [%f,%f,%f]\n', alpha, x(1), x(2), x(3))
     else 
+        fprintf('      alpha = %f fails to find an equilibrium', alpha)
         continue
     end
-    F = @(X) wrapper_Hopf(X, dim, f, df, phi);
-    DF = @(X) wrapper_DHopf(X, dim, df, dxxfv, dalphaf, dxalphaf, phi);
     
-    X_merge = @(x, alpha, eigenvec_real, eigenvec_imag, eigenval_imag) [x; alpha; eigenvec_real; eigenvec_imag; eigenval_imag];
-    
+    % at the found equilibrium, find the best eigenpair
     [V,L] = eigs(df(x, alpha));
     eigenval_imag = imag(L(1,1));
+    
+    % rotate the eigenvector to fit the linear scaling
     first_eig = V(:,1);
     scaling = 1i / (phi.' * first_eig);
     first_eig = scaling * first_eig;
@@ -120,30 +125,22 @@ for alpha = -1000:0.1:1000
     
     X = X_merge(x, alpha, eigenvec_real, eigenvec_imag, eigenval_imag);
     
-    % test of appropriate computation of derivatives:
-    % F(X);
-    % analytic_DF = DF(X);
-    % numerical_Df = finite_diff_fn(F,X);
-    % 
-    % if norm(analytic_DF- numerical_Df)>10^-5
-    % numerical_Df = finite_diff_fn(F, X, 10^-8);
-    % if norm(analytic_DF- numerical_Df)>10^-5
-    %     error('Some derivatives are wrong')
-    % end
-    % end
-    
     % Newton to find Hopf bifurcation
     try
         [X]=Newton(F, DF, X);
         if log(norm(X))<10
-        solutions(end+1,:) = X;
-        fprintf('A Hopf bifurcation has been found')
+            solutions(end+1,:) = X;
+            fprintf('A Hopf bifurcation has been found\n')
+        else
+            fprintf('Newton converged but the norm is too large to be trusted, norm = %e\n', norm(X))
+            poor_solutions(end+1,:) = X;
         end
     catch
         continue
     end
 end
 
+disp('End')
 % [x_star,lambda_star,eigenvec,eigenval, stability] = ...
 %     algebraic_hopf(f,df,ddf,dddf,N,X,phi,bool_val);
 
