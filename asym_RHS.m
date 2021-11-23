@@ -9,8 +9,8 @@ W = @(a) [a, -1, 1;
     -1, 1, a]+ 0.0001 * [ 1,2,3;4,5,6;1,4,8];
 
 % NEW EXAMPLE
-dim = 950;
-perturbation = 1/dim;
+dim = 4;
+perturbation = 1/(5000000*dim);
 if mod(dim,2)==1 && perturbation == 0
     warning('This endeavor would be unsuccessful - skew symmetric matrices of odd dimensions are singular and a non-zero perturbation is needed')
     perturbation = 10^-3;
@@ -83,7 +83,7 @@ if size(solutions,1)>0
     X = solution.';
     ddfv = @(x, a, v) dir_der2RHS(x, W(a), v);
     dddfvw = @(x, a, v, w) dir_der3RHS(x, W(a), v, w);
-    bool_val = 0;
+    bool_val = 1;
     dalphaf = @(x,a) der_alpha_RHS(x, W(a), dalphaW(a));
     dxalphaf = @(x, a) der_alpha_xRHS(x, W(a), dalphaW(a));
     dalphaxxf = @(x, a, v) der_x_x_alpha_RHS(x, W(a), dalphaW(a), v);

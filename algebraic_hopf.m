@@ -102,6 +102,7 @@ q =infsup( eigenvec_real + 1i*eigenvec_imag-rmin, eigenvec_real + 1i*eigenvec_im
 % p = null( DF(xH)^T-conj(beta)I)
 
 df_mat=df(x,alpha);
+df_mat_int=df(midrad(x,rmin),midrad(alpha,rmin));
 % next line does not work
 %p = null( df_mat.'-conj(1i*beta)*eye(size(df_mat)));
 
@@ -110,7 +111,7 @@ all_eigs=diag(all_beta);
 [~,index_beta]=min(all_eigs-conj(1i*eigenval_imag));
 p=all_p(:,index_beta);
 % verification of the eigenvalue
-[l,p]=verifyeig(midrad(df_mat',rmin),conj(1i*eigenval_imag),p);
+[l,p]=verifyeig(df_mat_int',conj(1i*eigenval_imag),p);
 
 complex_product=@(a,b) sum(conj(a).*b);
 
@@ -148,9 +149,9 @@ all_eigenvalues = diag(all_eigenvalues);
 [~,index_beta2]=min(all_eigenvalues+(1i*eigenval_imag));
 for i=1:length(all_eigs)
     if i~=index_beta1 && i~=index_beta2
-        [L,~] = verifyeig(df_mat,all_eigenvalues(i),all_eigenvectors(:,i));
+        [L,~] = verifyeig(df_mat_int,all_eigenvalues(i),all_eigenvectors(:,i));
         if intval(inf(real(L)))*intval(sup(real(L)))<0 && bool_val
-            error('Could not validate Hopf, since there is at least one eigenvalue that not verifyed to be non-zero')
+            error('Could not validate Hopf, since there is at least one eigenvalue that not verifyed to have non-zero real part')
         end
     end
 
