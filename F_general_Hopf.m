@@ -12,7 +12,7 @@ Phi1=X(2+dim+(1:dim)); Phi2=X(2+2*dim+(1:dim)); % The real and imaginary parts o
 
 f=feval(fn,x,alpha);
 if nargin<4 || isempty(df)
-    Df=finite_diff_fn(fn,x,alpha);
+    Df=finite_diff_fn(fn,x,10^-4,alpha);
 else
     Df=df(x,alpha);
 end

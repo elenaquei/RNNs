@@ -1,11 +1,7 @@
-function [alpha, beta, x, Phi1, Phi2]=newton_Hopf(fn,dfn, x,alpha,varargin)
+function [X, alpha, beta, x, Phi1, Phi2]=newton_Hopf(fn, X, phi, varargin)
 
 tol=1e-10;
 
-[V, L] = eigs(dfn(x, alpha));
-eig = diag(L);
-X = [alpha; imag(eig(1)); x ; real(V(:,1)); imag(V(:,1))];
-phi = rand(size(V,1),1);
 F=F_general_Hopf(fn,X,phi,varargin);
 
 display(['At the beggining, ||F(X)|| = ',num2str(norm(F))])

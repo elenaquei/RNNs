@@ -1,5 +1,5 @@
-function DDF= second_derivative_F(X,~,df)
-% function DDF= second_derivative_F(X,phi,df)
+function DDF= second_derivative_F(X,ddf,dddf, dalphaxf, dalphaxxf, dalphaalphaf, dalphaalphaxf)
+% function DDF= second_derivative_F(X,df)
 %
 % DDF \in R^length(X)
 
@@ -12,11 +12,19 @@ v1=X(2+dim+(1:dim)); v2=X(2+2*dim+(1:dim)); % The real and imaginary parts of th
 
 one=ones(dim,1);%[1;1];
 
-[DxFn,Dalphafn,DxxFnV1,DalphaxFn,DalphaxxFnV1,DalphaalphaFn,...
-    DalphaalphaxFn,DxxxFnV1] = df(x,alpha,v1);
-[~,~,DxxFnV2,~,DalphaxxFnV2,~,~,DxxxFnV2] = df(x,alpha,v2);
+DalphaxFn = dalphaxf(x,alpha);
+DalphaxxFnV1 = dalphaxxf(x,alpha,v1);
+DalphaxxFnV2= dalphaxxf(x,alpha,v2);
+DalphaalphaFn =  dalphaalphaf(x,alpha);
+DalphaalphaxFn = dalphaalphaxf(x,alpha);
+DxxxFnV1 = dddf(x,alpha,v1, one);
+DxxxFnV2 = dddf(x,alpha,v2, one);
+DxxFnONE = ddf(x,alpha, one);
 
-[~,~,DxxFnONE,~,DalphaxxFnONE,~,~,DxxxFnONE] = df(x,alpha,one);
+% [~,~,~,DalphaxFn,DalphaxxFnV1,DalphaalphaFn,...
+%     DalphaalphaxFn,DxxxFnV1] = df(x,alpha,v1);
+% [~,~,~,~,DalphaxxFnV2,~,~,DxxxFnV2] = df(x,alpha,v2);
+% [~,~,DxxFnONE,~,~,~,~,~] = df(x,alpha,one);
 
 DDF=[0
     0

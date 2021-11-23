@@ -1,4 +1,4 @@
-function y = f_Hopf(f, df, phi, x, alpha, eigenvec_real, eigenvec_imag, eigenval_imag)
+function y = f_Hopf(f, df, phi, alpha, eigenval_imag, x, eigenvec_real, eigenvec_imag)
 % Hopf problem
 %
 % f(x, alpha) = 0

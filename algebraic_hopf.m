@@ -1,5 +1,7 @@
 function [x_star,lambda_star,eigenvec,eigenval, stability] = ...
-    algebraic_hopf(f,df,ddf,dddf,N,X,phi,bool_val)
+    algebraic_hopf(f,df,ddf,dddf,dalphaf, dalphaxf, dalphaxxf, dalphaalphaf,...
+    dalphaalphaxf, N,X,phi,bool_val)
+ 
 %function [x_star,lambda_star,eigenvec,eigenval] = ...
 %    algebraic_hopf_lorenz(f,df,ddf,dddf,N,X,phi)
 %
@@ -14,7 +16,7 @@ function [x_star,lambda_star,eigenvec,eigenval, stability] = ...
 %       directions of the derivative
 % dddf  function handle, third derivative of f, input x and three 
 %       directions of the derivative
-% return directional derivatives
+%       return directional derivatives
 % N     integer, dimension of the system 
 % X     2+3*N vector, approximation of the Hopf point (optional, DEFAULT
 %       random)
@@ -40,24 +42,27 @@ if nargin<5
     error('Too few input arguments')
 end
 
-[X]=newton_Hopf(f,X,phi);
+F=F_general_Hopf(f,X,phi,df);
+
+if norm(F)>10^-6
+    [X]=newton_Hopf(f,X,phi);
+end
 
 alpha=X(1); % Parameter 
-beta=X(2); % distance of the complex conjugate eigs from the real axis
+eigenval_imag=X(2); % distance of the complex conjugate eigs from the real axis
 
 x=X(2+(1:N)); % the variables from the model
-v1=X(N+2+(1:N)); v2=X(2*N+2+(1:N)); % The real and imaginary parts of the eigenvector
+eigenvec_real=X(N+2+(1:N)); 
+eigenvec_imag=X(2*N+2+(1:N)); % The real and imaginary parts of the eigenvector
 
 %%%% validation
 % for the validation, the exact derivative of f is necessary
-DF = big_derivative(df,X,phi);
+DF = Df_Hopf(f, df, ddf, dalphaf, dalphaxf, phi, alpha, eigenval_imag, x, eigenvec_real, eigenvec_imag);
 if rank(DF)-size(DF,1)<0
     error('Derivative not invertible')
 end
 
 A=inv(DF);
-
-F=F_general_Hopf(f,X,phi,df);
 
 % start intlab
 Y = norm(A*F);
@@ -67,7 +72,7 @@ Z1 = norm( eye(length(X)) - A *DF);
 R = 0.3; % first approximation of the maximum radius
 
 XandR=infsup(X-R,X+R);
-DDF= second_derivative_F(XandR,phi,df);
+DDF= second_derivative_F(XandR,ddf,dddf, dalphaxf, dalphaxxf, dalphaalphaf, dalphaalphaxf);
 
 Z2 = norm(sup(abs(A*DDF)));
 
@@ -91,7 +96,7 @@ plot(r,pol(r),'b',rmin,0,'ok',rmax,0,'or');
 
 
 % compute the first Lyapunov coefficient as in Kuznetsov
-q =infsup( v1 + 1i*v2-rmin, v1 + 1i*v2+rmin);
+q =infsup( eigenvec_real + 1i*eigenvec_imag-rmin, eigenvec_real + 1i*eigenvec_imag+rmin);
 
 % p: DF(xH)^Tp=conj(beta)p
 % p = null( DF(xH)^T-conj(beta)I)
@@ -102,10 +107,10 @@ df_mat=df(x,alpha);
 
 [all_p,all_beta]=eigs(df_mat.');
 all_eigs=diag(all_beta);
-[~,index_beta]=min(all_eigs-conj(1i*beta));
+[~,index_beta]=min(all_eigs-conj(1i*eigenval_imag));
 p=all_p(:,index_beta);
 % verification of the eigenvalue
-[l,p]=verifyeig(midrad(df_mat',rmin),conj(1i*beta),p);
+[l,p]=verifyeig(midrad(df_mat',rmin),conj(1i*eigenval_imag),p);
 
 complex_product=@(a,b) sum(conj(a).*b);
 
@@ -120,11 +125,15 @@ k1= k2*ratio;
 
 p=(k1+1i*k2)*p;
 
-beta_ver=infsup(beta-rmin,beta+rmin);
+beta_ver=infsup(eigenval_imag-rmin,eigenval_imag+rmin);
 
 % compute the first lyapunov coefficient
-l1 = 1/(2*beta_ver) * real(1i*complex_product(p,ddf(zeros(N,1),q,q)*complex_product(p,ddf(zeros(N,1),q,conj(q))))+...
-    beta_ver*complex_product(p,dddf(zeros(N,1),q,q,conj(q))));
+l1 = 1/(2*beta_ver) * real(1i*complex_product(p,(ddf(zeros(N,1),alpha,q)*q)*complex_product(p,ddf(zeros(N,1),alpha,q)*conj(q)))+...
+    beta_ver*complex_product(p,dddf(zeros(N,1),alpha,q,q)*conj(q)));
+
+% OLD:
+%l1 = 1/(2*beta_ver) * real(1i*complex_product(p,ddf(zeros(N,1),q,q)*complex_product(p,ddf(zeros(N,1),q,conj(q))))+...
+%    beta_ver*complex_product(p,dddf(zeros(N,1),q,q,conj(q))));
 
 % check the FLC is nonzero
 if intval(inf(l1))*intval(sup(l1))<0 && bool_val
@@ -135,8 +144,8 @@ end
 % last check: all ther eigenvalues different then zero
 [all_eigenvectors,all_eigenvalues]=eigs(df_mat.');
 all_eigenvalues = diag(all_eigenvalues);
-[~,index_beta1]=min(all_eigenvalues-(1i*beta));
-[~,index_beta2]=min(all_eigenvalues+(1i*beta));
+[~,index_beta1]=min(all_eigenvalues-(1i*eigenval_imag));
+[~,index_beta2]=min(all_eigenvalues+(1i*eigenval_imag));
 for i=1:length(all_eigs)
     if i~=index_beta1 && i~=index_beta2
         [L,~] = verifyeig(df_mat,all_eigenvalues(i),all_eigenvectors(:,i));
@@ -146,22 +155,27 @@ for i=1:length(all_eigs)
     end
 
 end
-fprintf('SUCCESS\n The Hopf bifurcation at [%1.3f,%1.3f], %1.3f has been verified\n',x(1),x(2),alpha)
-fprintf('with a radius of %e to %e\n\n',rmin, rmax) 
+if all(abs(x)>10^-3) && abs(alpha)>10^-3
+    fprintf('SUCCESS\n The Hopf bifurcation at [%1.3f,%1.3f], %1.3f has been verified\n',x(1),x(2),alpha)
+else
+    fprintf('SUCCESS\n The Hopf bifurcation at [%1.3e,%1.3e], %1.3e has been verified\n',x(1),x(2),alpha)
+end
+fprintf('with a radius of %e to %e and Lyapunov coefficient %1.3f +/- %1.1e\n\n',rmin, rmax, mid(l1), rad(l1)) 
 
 x_star = X(2+(1:N));
 lambda_star = X(1);
-eigenvec = v1+1i*v2;
-eigenval = 1i*beta;
+eigenvec = eigenvec_real+1i*eigenvec_imag;
+eigenval = 1i*eigenval_imag;
 if l1>0
     stability = 1;
 else
     stability = -1;
 end
 
-
-
 return
+
+
+end
 
 
 
