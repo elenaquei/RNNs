@@ -9,8 +9,8 @@ W = @(a) [a, -1, 1;
     -1, 1, a]+ 0.0001 * [ 1,2,3;4,5,6;1,4,8];
 
 % NEW EXAMPLE
-dim = 4;
-perturbation = 1/(5000000*dim);
+dim = 10;
+perturbation = 0.1;
 if mod(dim,2)==1 && perturbation == 0
     warning('This endeavor would be unsuccessful - skew symmetric matrices of odd dimensions are singular and a non-zero perturbation is needed')
     perturbation = 10^-3;
@@ -25,6 +25,7 @@ dalphaW = @(a) eye(dim);
 
 dalphalphaW = @(a) zeros(dim,dim);
 phi = randi([-5,5],[dim,1]);
+phi = phi/norm(phi);
 
 % construction of the Hopf problem based on the just defined elements:
 f = @(x, a) asym_rhs(x, W(a));
@@ -46,52 +47,84 @@ poor_solutions = [];
 
 % getting a better equilibrium for the ODE
 x = zeros(size(W(1), 1),1); % system status
+alpha = 0;
 
 x = Newton(@(x)f(x,alpha), @(x)df(x,alpha), x);
 
 % at the found equilibrium, find the best eigenpair
-[V,L] = eigs(df(x, alpha));
-eigenval_imag = imag(L(1,1));
+[V,L] = eigs(df(x, alpha), dim);
 
-% rotate the eigenvector to fit the linear scaling
-first_eig = V(:,1);
-scaling = 1i / (phi.' * first_eig);
-first_eig = scaling * first_eig;
-eigenvec_real = real(first_eig);
-eigenvec_imag = imag(first_eig);
+for i = 1:dim
 
-X = X_merge(alpha, eigenval_imag, x, eigenvec_real, eigenvec_imag);
-
-% Newton to find Hopf bifurcation
-try
-    [X]=Newton(F, DF, X);
-    if log(norm(X))<10
-        solutions(end+1,:) = X;
-        fprintf('A Hopf bifurcation has been found\n')
-    else
-        fprintf('Newton converged but the norm is too large to be trusted, norm = %e\n', norm(X))
-        poor_solutions(end+1,:) = X;
+    eigenval_imag = imag(L(i,i));
+    
+    % rotate the eigenvector to fit the linear scaling
+    first_eig = V(:,i);
+    scaling = 1i / (phi.' * first_eig);
+    first_eig = scaling * first_eig;
+    eigenvec_real = real(first_eig);
+    eigenvec_imag = imag(first_eig);
+    
+    X = X_merge(alpha, eigenval_imag, x, eigenvec_real, eigenvec_imag);
+    
+    % Newton to find Hopf bifurcation
+    try
+        [X]=Newton(F, DF, X);
+        if log(norm(X))<10
+            solutions(end+1,:) = X;
+            fprintf('A Hopf bifurcation has been found\n')
+            
+        else
+            fprintf('Newton converged but the norm is too large to be trusted, norm = %e\n', norm(X))
+            poor_solutions(end+1,:) = X;
+        end
+    catch
+        error('No Hopf bifurcation found')
     end
-catch
-    error('No Hopf bifurcation found')
+    
 end
 
+number_of_positive_stab = 0;
+number_of_negative_stab = 0;
+not_proven = 0;
 
-fprintf('Found a numerical Hopf bifurcation, now the validation starts\n', size(solutions,1))
-if size(solutions,1)>0
-    solution = solutions(1,:);
+positive_stab_index = ([]);
+negative_stab_index = ([]);
+positive_stab = intval([]);
+negative_stab = intval([]);
+unproven = [];
+
+fprintf('Finished the numerical search, now the validation starts\n', size(solutions,1))
+
+ddfv = @(x, a, v) dir_der2RHS(x, W(a), v);
+dddfvw = @(x, a, v, w) dir_der3RHS(x, W(a), v, w);
+bool_val = 1;
+dalphaf = @(x,a) der_alpha_RHS(x, W(a), dalphaW(a));
+dxalphaf = @(x, a) der_alpha_xRHS(x, W(a), dalphaW(a));
+dalphaxxf = @(x, a, v) der_x_x_alpha_RHS(x, W(a), dalphaW(a), v);
+dalphaalphaf = @(x, a)der_alpha_alpha_RHS(x, W(a), dalphaW(a), dalphalphaW(a));
+dalphaalphaxf = @(x, a, v) der_x_alpha_alpha_RHS(x, W(a), dalphaW(a), dalphalphaW(a));
+
+for i = 1: size(solutions,1)
+    solution = solutions(i,:);
     X = solution.';
-    ddfv = @(x, a, v) dir_der2RHS(x, W(a), v);
-    dddfvw = @(x, a, v, w) dir_der3RHS(x, W(a), v, w);
-    bool_val = 1;
-    dalphaf = @(x,a) der_alpha_RHS(x, W(a), dalphaW(a));
-    dxalphaf = @(x, a) der_alpha_xRHS(x, W(a), dalphaW(a));
-    dalphaxxf = @(x, a, v) der_x_x_alpha_RHS(x, W(a), dalphaW(a), v);
-    dalphaalphaf = @(x, a)der_alpha_alpha_RHS(x, W(a), dalphaW(a), dalphalphaW(a));
-    dalphaalphaxf = @(x, a, v) der_x_alpha_alpha_RHS(x, W(a), dalphaW(a), dalphalphaW(a));
-    
-    [x_star,lambda_star,eigenvec,eigenval, stability] = ...
-        algebraic_hopf(f,df,ddfv,dddfvw, dalphaf, dxalphaf,dalphaxxf, dalphaalphaf,dalphaalphaxf, dim,X,phi,bool_val);
+    try
+        [x_star,lambda_star,eigenvec,eigenval, l1] = ...
+            algebraic_hopf(f,df,ddfv,dddfvw, dalphaf, dxalphaf,dalphaxxf, dalphaalphaf,dalphaalphaxf, dim,X,phi,bool_val);
+        if l1>0
+            number_of_positive_stab = number_of_positive_stab+1;
+            positive_stab_index(end+1) = i;
+            positive_stab(end+1) = l1;
+        else
+            number_of_negative_stab = number_of_negative_stab+1;
+            negative_stab_index(end+1)= i;
+            negative_stab(end+1)= l1;
+            fprintf('Negative stability found!')
+        end
+    catch
+        not_proven = not_proven+1;
+        unproven(end+1) = i;
+    end
 end
 
 function [alpha, eigenval_imag, x, eigenvec_real, eigenvec_imag] = split_into_elements(X, dim)

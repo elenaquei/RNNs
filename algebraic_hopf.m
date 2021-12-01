@@ -1,4 +1,4 @@
-function [x_star,lambda_star,eigenvec,eigenval, stability] = ...
+function [x_star,lambda_star,eigenvec,eigenval, l1] = ...
     algebraic_hopf(f,df,ddf,dddf,dalphaf, dalphaxf, dalphaxxf, dalphaalphaf,...
     dalphaalphaxf, N,X,phi,bool_val)
  
@@ -94,68 +94,9 @@ end
 r=linspace(0,1.3*rmax,100);
 plot(r,pol(r),'b',rmin,0,'ok',rmax,0,'or');
 
-
-% compute the first Lyapunov coefficient as in Kuznetsov
-q =infsup( eigenvec_real + 1i*eigenvec_imag-rmin, eigenvec_real + 1i*eigenvec_imag+rmin);
-
-% p: DF(xH)^Tp=conj(beta)p
-% p = null( DF(xH)^T-conj(beta)I)
-
-df_mat=df(x,alpha);
-df_mat_int=df(midrad(x,rmin),midrad(alpha,rmin));
-% next line does not work
-%p = null( df_mat.'-conj(1i*beta)*eye(size(df_mat)));
-
-[all_p,all_beta]=eigs(df_mat.');
-all_eigs=diag(all_beta);
-[~,index_beta]=min(all_eigs-conj(1i*eigenval_imag));
-p=all_p(:,index_beta);
-% verification of the eigenvalue
-[l,p]=verifyeig(df_mat_int',conj(1i*eigenval_imag),p);
-
-complex_product=@(a,b) sum(conj(a).*b);
+l1 = first_lyapunov(df, ddf, dddf, x, alpha, abs(eigenval_imag), rmin, bool_val);
 
 
-% look for k, the rescaling coefficient such that <kp,q>=1
-% k = k1 + i k2
-
-% k1/k2
-ratio = real(complex_product(p,q))/imag(complex_product(p,q));
-k2 = 1/( ratio* real(complex_product(p,q))+imag(complex_product(p,q)));
-k1= k2*ratio;
-
-p=(k1+1i*k2)*p;
-
-beta_ver=infsup(eigenval_imag-rmin,eigenval_imag+rmin);
-
-% compute the first lyapunov coefficient
-l1 = 1/(2*beta_ver) * real(1i*complex_product(p,(ddf(zeros(N,1),alpha,q)*q)*complex_product(p,ddf(zeros(N,1),alpha,q)*conj(q)))+...
-    beta_ver*complex_product(p,dddf(zeros(N,1),alpha,q,q)*conj(q)));
-
-% OLD:
-%l1 = 1/(2*beta_ver) * real(1i*complex_product(p,ddf(zeros(N,1),q,q)*complex_product(p,ddf(zeros(N,1),q,conj(q))))+...
-%    beta_ver*complex_product(p,dddf(zeros(N,1),q,q,conj(q))));
-
-% check the FLC is nonzero
-if intval(inf(l1))*intval(sup(l1))<0 && bool_val
-    error('Could not validate Hopf, since the first Lyapunov coefficient is not verifyed to be non-zero')
-end
-
-
-% last check: all ther eigenvalues different then zero
-[all_eigenvectors,all_eigenvalues]=eigs(df_mat.');
-all_eigenvalues = diag(all_eigenvalues);
-[~,index_beta1]=min(all_eigenvalues-(1i*eigenval_imag));
-[~,index_beta2]=min(all_eigenvalues+(1i*eigenval_imag));
-for i=1:length(all_eigs)
-    if i~=index_beta1 && i~=index_beta2
-        [L,~] = verifyeig(df_mat_int,all_eigenvalues(i),all_eigenvectors(:,i));
-        if intval(inf(real(L)))*intval(sup(real(L)))<0 && bool_val
-            error('Could not validate Hopf, since there is at least one eigenvalue that not verifyed to have non-zero real part')
-        end
-    end
-
-end
 if all(abs(x)>10^-3) && abs(alpha)>10^-3
     fprintf('SUCCESS\n The Hopf bifurcation at [%1.3f,%1.3f], %1.3f has been verified\n',x(1),x(2),alpha)
 else
@@ -178,5 +119,82 @@ return
 
 end
 
+function l1 = first_lyapunov(df, ddf, dddf, x, alpha, eigenval_imag, rmin, bool_val)
 
+% compute the first Lyapunov coefficient as in Kuznetsov
+% p: DF(xH)^Tp=conj(beta)p
+% p = null( DF(xH)^T-conj(beta)I)
+
+df_mat=df(x,alpha);
+df_mat_int=df(midrad(x,rmin),midrad(alpha,rmin));
+% next line does not work
+%p = null( df_mat.'-conj(1i*beta)*eye(size(df_mat)));
+
+[all_q,all_beta]=eigs(df_mat);
+all_eigs=diag(all_beta);
+[~,index_beta]=min(all_eigs-(1i*eigenval_imag));
+q_new=all_q(:,index_beta);
+% verification of the eigenvalue
+[l,q]=verifyeig(df_mat_int,(1i*eigenval_imag),q_new);
+
+if isnan(l)
+    error('Linear validation failed')
+end
+
+[all_p,all_beta]=eigs(df_mat.');
+all_eigs=diag(all_beta);
+[~,index_beta]=min(all_eigs+(1i*eigenval_imag));
+p=all_p(:,index_beta);
+% verification of the eigenvalue
+[l,p]=verifyeig(df_mat_int.',-(1i*eigenval_imag),p);
+
+if isnan(l)
+    error('Linear validation failed')
+end
+
+complex_product=@(a,b) sum(conj(a).*b);
+
+
+% look for k, the rescaling coefficient such that <kp,q>=1
+% k = k1 + i k2
+
+% k1/k2
+ratio = real(complex_product(p,q))/imag(complex_product(p,q));
+k2 = 1/( ratio* real(complex_product(p,q))+imag(complex_product(p,q)));
+k1= k2*ratio;
+
+p=(k1+1i*k2)*p;
+
+beta_ver=infsup(eigenval_imag-rmin,eigenval_imag+rmin);
+
+% compute the first lyapunov coefficient
+l1 = 1/(2*beta_ver.^2) * real(1i*complex_product(p,ddf(x,alpha,q)*q)*complex_product(p,ddf(x,alpha,q)*conj(q))+...
+    beta_ver*complex_product(p,dddf(x,alpha,q,q)*conj(q)));
+
+% OLD:
+%l1 = 1/(2*beta_ver) * real(1i*complex_product(p,ddf(zeros(N,1),q,q)*complex_product(p,ddf(zeros(N,1),q,conj(q))))+...
+%    beta_ver*complex_product(p,dddf(zeros(N,1),q,q,conj(q))));
+
+% check the FLC is nonzero
+if isnan(l1) && bool_val
+    error('Could not validate Hopf, since the first Lyapunov coefficient is NaN')
+elseif  intval(inf(l1))*intval(sup(l1))<0 && bool_val
+    error('Could not validate Hopf, since the first Lyapunov coefficient is not verifyed to be non-zero')
+end
+
+% last check: all ther eigenvalues different then zero
+[all_eigenvectors,all_eigenvalues]=eigs(df_mat.');
+all_eigenvalues = diag(all_eigenvalues);
+[~,index_beta1]=min(all_eigenvalues-(1i*eigenval_imag));
+[~,index_beta2]=min(all_eigenvalues+(1i*eigenval_imag));
+for i=1:length(all_eigs)
+    if i~=index_beta1 && i~=index_beta2
+        [L,~] = verifyeig(df_mat_int,all_eigenvalues(i),all_eigenvectors(:,i));
+        if intval(inf(real(L)))*intval(sup(real(L)))<0 && bool_val
+            error('Could not validate Hopf, since there is at least one eigenvalue that not verifyed to have non-zero real part')
+        end
+    end
+
+end
+end
 
