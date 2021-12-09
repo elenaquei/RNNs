@@ -26,7 +26,10 @@ function [x_star,lambda_star,eigenvec,eigenval, l1] = ...
 % lambda_star   parameter value at the Hopf bifurcation
 % eigenvec      eigenvector 
 % eigenval      eigenvalue 
-% stability     +1 supercritical, -1 subcritical Hopf bifurcation
+% l1            >0 supercritical, <0 subcritical Hopf bifurcation 
+
+% supercritical : stable limit cycle
+% subcritical : unstable limit cycle
 if nargin<8
     bool_val = 1;
 end
@@ -130,9 +133,12 @@ df_mat_int=df(midrad(x,rmin),midrad(alpha,rmin));
 % next line does not work
 %p = null( df_mat.'-conj(1i*beta)*eye(size(df_mat)));
 
-[all_q,all_beta]=eigs(df_mat);
+[all_q,all_beta]=eigs(df_mat, length(x));
 all_eigs=diag(all_beta);
-[~,index_beta]=min(all_eigs-(1i*eigenval_imag));
+[min_diff,index_beta]=min(all_eigs-(1i*eigenval_imag));
+if min_diff > rmin
+    error('What is this??')
+end
 q_new=all_q(:,index_beta);
 % verification of the eigenvalue
 [l,q]=verifyeig(df_mat_int,(1i*eigenval_imag),q_new);
@@ -141,7 +147,7 @@ if isnan(l)
     error('Linear validation failed')
 end
 
-[all_p,all_beta]=eigs(df_mat.');
+[all_p,all_beta]=eigs(df_mat.', length(x));
 all_eigs=diag(all_beta);
 [~,index_beta]=min(all_eigs+(1i*eigenval_imag));
 p=all_p(:,index_beta);
@@ -183,7 +189,7 @@ elseif  intval(inf(l1))*intval(sup(l1))<0 && bool_val
 end
 
 % last check: all ther eigenvalues different then zero
-[all_eigenvectors,all_eigenvalues]=eigs(df_mat.');
+[all_eigenvectors,all_eigenvalues]=eigs(df_mat.', length(x));
 all_eigenvalues = diag(all_eigenvalues);
 [~,index_beta1]=min(all_eigenvalues-(1i*eigenval_imag));
 [~,index_beta2]=min(all_eigenvalues+(1i*eigenval_imag));

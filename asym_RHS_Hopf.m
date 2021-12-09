@@ -9,7 +9,7 @@ W = @(a) [a, -1, 1;
     -1, 1, a]+ 0.0001 * [ 1,2,3;4,5,6;1,4,8];
 
 % NEW EXAMPLE
-dim = 10;
+dim = 20;
 perturbation = 0.1;
 if mod(dim,2)==1 && perturbation == 0
     warning('This endeavor would be unsuccessful - skew symmetric matrices of odd dimensions are singular and a non-zero perturbation is needed')
@@ -88,10 +88,10 @@ number_of_positive_stab = 0;
 number_of_negative_stab = 0;
 not_proven = 0;
 
-positive_stab_index = ([]);
-negative_stab_index = ([]);
-positive_stab = intval([]);
-negative_stab = intval([]);
+positive_lyap_index = ([]);
+negative_lyap_index = ([]);
+positive_lyap = intval([]);
+negative_lyap = intval([]);
 unproven = [];
 
 fprintf('Finished the numerical search, now the validation starts\n', size(solutions,1))
@@ -113,18 +113,23 @@ for i = 1: size(solutions,1)
             algebraic_hopf(f,df,ddfv,dddfvw, dalphaf, dxalphaf,dalphaxxf, dalphaalphaf,dalphaalphaxf, dim,X,phi,bool_val);
         if l1>0
             number_of_positive_stab = number_of_positive_stab+1;
-            positive_stab_index(end+1) = i;
-            positive_stab(end+1) = l1;
+            positive_lyap_index(end+1) = i;
+            positive_lyap(end+1) = l1;
         else
             number_of_negative_stab = number_of_negative_stab+1;
-            negative_stab_index(end+1)= i;
-            negative_stab(end+1)= l1;
+            negative_lyap_index(end+1)= i;
+            negative_lyap(end+1)= l1;
             fprintf('Negative stability found!')
         end
     catch
         not_proven = not_proven+1;
         unproven(end+1) = i;
     end
+end
+if ~isempty(unproven)
+    fprintf('We could not prove %i bifurcations\n',length(unproven));
+else
+    fprintf('We could validate all Hopf bifurcations\n');
 end
 
 function [alpha, eigenval_imag, x, eigenvec_real, eigenvec_imag] = split_into_elements(X, dim)
