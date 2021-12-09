@@ -26,7 +26,7 @@ function [x_star,lambda_star,eigenvec,eigenval, l1] = ...
 % lambda_star   parameter value at the Hopf bifurcation
 % eigenvec      eigenvector 
 % eigenval      eigenvalue 
-% l1            >0 supercritical, <0 subcritical Hopf bifurcation 
+% l1            <0 supercritical, >0 subcritical Hopf bifurcation 
 
 % supercritical : stable limit cycle
 % subcritical : unstable limit cycle
@@ -94,8 +94,8 @@ if rmax>R
     warning('computation has to be rerun with higher R')
 end
 
-r=linspace(0,1.3*rmax,100);
-plot(r,pol(r),'b',rmin,0,'ok',rmax,0,'or');
+% r=linspace(0,1.3*rmax,100);
+% plot(r,pol(r),'b',rmin,0,'ok',rmax,0,'or');
 
 l1 = first_lyapunov(df, ddf, dddf, x, alpha, abs(eigenval_imag), rmin, bool_val);
 

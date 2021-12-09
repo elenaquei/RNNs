@@ -9,14 +9,23 @@ W = @(a) [a, -1, 1;
     -1, 1, a]+ 0.0001 * [ 1,2,3;4,5,6;1,4,8];
 
 % NEW EXAMPLE
-dim = 20;
+dim = 400;
 perturbation = 0.1;
 if mod(dim,2)==1 && perturbation == 0
     warning('This endeavor would be unsuccessful - skew symmetric matrices of odd dimensions are singular and a non-zero perturbation is needed')
     perturbation = 10^-3;
     fprintf('The perturbation is set to %f\n\n', perturbation);
 end
-
+rng('default')
+% rng(10)   % CAN FIND PERIODIC ORBIT (in backward time)
+% rng(120) % for dim = 50, gives a singular W at alpha = 0.1888, can't
+% validate the Hopf associatedd to the largest alpha
+rng(80)
+validation = 1;
+list_finding_orbit_dim6 = [10, 3, 80];
+list_finding_orbit_dim50 = [10, 80];
+list_finding_orbit_dim150 = [10, 80];
+list_finding_orbit_dim400 = [10, 80];
 R1 = randn(dim,dim);
 R2 = perturbation * randn(dim,dim);
 W = @(a) R1 - R1.' + a * eye(dim) + R2;
@@ -71,9 +80,10 @@ for i = 1:dim
     try
         [X]=Newton(F, DF, X);
         if log(norm(X))<10
-            solutions(end+1,:) = X;
-            fprintf('A Hopf bifurcation has been found\n')
-            
+            if size(solutions,1)<1 || max(abs(solutions(:,1)-X(1)))>10^-7
+                solutions(end+1,:) = X;
+                fprintf('A Hopf bifurcation has been found\n')
+            end
         else
             fprintf('Newton converged but the norm is too large to be trusted, norm = %e\n', norm(X))
             poor_solutions(end+1,:) = X;
@@ -105,7 +115,7 @@ dalphaxxf = @(x, a, v) der_x_x_alpha_RHS(x, W(a), dalphaW(a), v);
 dalphaalphaf = @(x, a)der_alpha_alpha_RHS(x, W(a), dalphaW(a), dalphalphaW(a));
 dalphaalphaxf = @(x, a, v) der_x_alpha_alpha_RHS(x, W(a), dalphaW(a), dalphalphaW(a));
 
-for i = 1: size(solutions,1)
+for i = 1: size(solutions,1)*validation
     solution = solutions(i,:);
     X = solution.';
     try
@@ -131,6 +141,40 @@ if ~isempty(unproven)
 else
     fprintf('We could validate all Hopf bifurcations\n');
 end
+
+x = solutions(1:end,2+(1:dim));
+bifurcation_values = solutions(1:end,1);
+[alpha_big, index] = max(bifurcation_values);
+eigenvec  = solutions(1:end,2+dim+(1:dim))+ 1i*solutions(1:end,2+2*dim+(1:dim));
+eigenvec_plot = eigenvec(index,:);
+plotting_dim = min(dim, 6);
+figure
+[t,y] = ode45(@(t,x) f(x, alpha_big), [0,500], x(index,:) + sqrt(01000) * abs(eigenvec(2,:)));
+plot(t, y(:,1:plotting_dim), 'LineWidth',3)
+set(gca,'FontSize',18)
+figure
+[t,y] = ode45(@(t,x) -f(x, alpha_big), [0,150], x(index,:) + sqrt(0.10) * abs(eigenvec(2,:)));
+[t,y] = ode45(@(t,x) f(x, alpha_big), [0,150], y(end,:));
+plot(t, y(:,1:plotting_dim),'LineWidth',3)
+set(gca,'FontSize',18)
+%plot_bifurcation_diag(f, solutions(1:2:end,2+(1:dim)),solutions(1:2:end,1), ...
+%    solutions(1:2:end,2+dim+(1:dim))+ 1i*solutions(1:2:end,2+2*dim+(1:dim)))
+
+% case 1
+if dim == 6
+    figure
+    [t,y] = ode45(@(t,x) -f(x, alpha_big), [0,150], x(index,:) + sqrt(0.10) * abs(eigenvec(2,:)));
+    [t,y] = ode45(@(t,x) f(x, alpha_big), [0,100], y(end,:));
+    plot(t(300:end)-t(300), y(300:end,1:plotting_dim),'LineWidth',3)
+    set(gca,'FontSize',18)
+elseif dim == 50
+    figure
+    [t,y] = ode45(@(t,x) -f(x, alpha_big), [0,150], x(index,:) + sqrt(0.10) * abs(eigenvec(2,:)));
+    [t,y] = ode45(@(t,x) f(x, alpha_big), [0,45], y(end,:));
+    plot(t(1700:end)-t(1700), y(1700:end,1:plotting_dim),'LineWidth',3)
+    set(gca,'FontSize',18)
+end
+
 
 function [alpha, eigenval_imag, x, eigenvec_real, eigenvec_imag] = split_into_elements(X, dim)
 if length(X) ~= 3*dim+2
