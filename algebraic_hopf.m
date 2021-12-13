@@ -99,13 +99,15 @@ end
 
 l1 = first_lyapunov(df, ddf, dddf, x, alpha, abs(eigenval_imag), rmin, bool_val);
 
-
-if all(abs(x)>10^-3) && abs(alpha)>10^-3
-    fprintf('SUCCESS\n The Hopf bifurcation at [%1.3f,%1.3f], %1.3f has been verified\n',x(1),x(2),alpha)
-else
-    fprintf('SUCCESS\n The Hopf bifurcation at [%1.3e,%1.3e], %1.3e has been verified\n',x(1),x(2),alpha)
+st = dbstack();
+if length(st)<2  % print only if called directly
+    if all(abs(x)>10^-3) && abs(alpha)>10^-3
+        fprintf('SUCCESS\n The Hopf bifurcation at [%1.3f,%1.3f], %1.3f has been verified\n',x(1),x(2),alpha)
+    else
+        fprintf('SUCCESS\n The Hopf bifurcation at [%1.3e,%1.3e], %1.3e has been verified\n',x(1),x(2),alpha)
+    end
+    fprintf('with a radius of %e to %e and Lyapunov coefficient %1.3f +/- %1.1e\n\n',rmin, rmax, mid(l1), rad(l1))
 end
-fprintf('with a radius of %e to %e and Lyapunov coefficient %1.3f +/- %1.1e\n\n',rmin, rmax, mid(l1), rad(l1)) 
 
 x_star = X(2+(1:N));
 lambda_star = X(1);

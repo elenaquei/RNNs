@@ -1,37 +1,83 @@
+function [solutions, positive_lyap_index, negative_lyap_index, positive_lyap, negative_lyap, unproven] = asym_RHS_Hopf(dim, varargin)
 % find Hopf bifurcation in AsymmetricRNN
-% Now, we can consider a less symmetric system!
-% definition of system-specific elements:
+% This code generates a random dynamical system based on RNNs, then
+% numerically finds and validates Hopf bifurcations w.r.t. the
+% hyperparameter.
+% This code refers to the paper "PLACEHOLDER" by E. Queirolo and C. Kuehn
+%
+% function asym_RHS_Hopf(dim, varargin)
+% can be called with additional info
+% perturbation (DEFAULT 0.1), R1 and R2, or seed (DEFAULT 80)
+% 
+% Examples
+% asym_RHS_Hop(10)
+% asym_RHS_Hopf(10, 'seed', 4)
+% asym_RHS_Hopf(4, 'perturbation', 0.01)
+% asym_RHS_Hopf(6, 'perturbation', 10^-4)
+% asym_RHS_Hopf(100, 'R1', R1, 'R2', R2) where R1 and R2 are square
+%                                           matrices of same size
+% combination of inputs is also possible, such as
+%
+% asym_RHS_Hopf(10, 'perturbation', 0.4, 'R1', R1, 'seed', 7)
+%
+% OUTPUTS
+%
+% solutions     each column is a numerical solution, stored as 
+%               alpha, eigenval_imag, x, eigenvec_real, eigenvec_imag
+% positive_lyap_index, negative_lyap_index, positive_lyap, negative_lyap, unproven
 
-% OLD
-dim = 3;
-W = @(a) [a, -1, 1;
-    1, a, -1;
-    -1, 1, a]+ 0.0001 * [ 1,2,3;4,5,6;1,4,8];
+    function [dim, seed, R1, R2, validation] = input_parse(dim, varargin)
+        defaultPerturbation = 0.1;
+        defaultSeed = 80;
+        defaultValidation = 1;
 
-% NEW EXAMPLE
-dim = 400;
-perturbation = 0.1;
-if mod(dim,2)==1 && perturbation == 0
-    warning('This endeavor would be unsuccessful - skew symmetric matrices of odd dimensions are singular and a non-zero perturbation is needed')
-    perturbation = 10^-3;
-    fprintf('The perturbation is set to %f\n\n', perturbation);
-end
-rng('default')
-% rng(10)   % CAN FIND PERIODIC ORBIT (in backward time)
+        p = inputParser;
+        validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x > 0);
+        validInteger = @(x) isnumeric(x) && isscalar(x) && (mod(x,1) ==0);
+        addOptional(p,'perturbation',defaultPerturbation,validScalarPosNum);
+        addOptional(p,'validation',defaultValidation,validInteger);
+        addOptional(p,'seed',defaultSeed,validInteger);
+        parse(p,dim,varargin{:});
+        perturbation = p.Results.perturbation;
+        validation = p.Results.validation;
+        seed = p.Results.seed;
+
+        rng('default')
+        rng(seed)
+        defaultR1 = randn(dim, dim);
+        defaultR2 = perturbation * randn(dim, dim);
+        validMatrix = @(x) isnumeric(x) && size(x,1) == dim && size(x,2) == dim && length(size(x))==2;
+        addParameter(p,'R1',defaultR1,validMatrix);
+        addParameter(p,'R2',defaultR2,validMatrix);
+        parse(p,dim,varargin{:});
+        
+        R1 = p.Results.R1;
+        R2 = p.Results.R2;
+
+        if mod(dim,2)==1 && perturbation == 0
+            warning('This endeavor would be unsuccessful - skew symmetric matrices of odd dimensions are singular and a non-zero perturbation is needed')
+            perturbation = 10^-3;
+            fprintf('The perturbation is set to %f\n\n', perturbation);
+            R1 = randn(dim,dim);
+            R2 = perturbation * randn(dim,dim);
+        end
+    end
+
+% inout parsing and definition of ystem parameters
+[dim, seed, R1, R2, validation] = input_parse(dim, varargin{:});
+
 % rng(120) % for dim = 50, gives a singular W at alpha = 0.1888, can't
 % validate the Hopf associatedd to the largest alpha
-rng(80)
-validation = 1;
+
+% tested random seeds 
 list_finding_orbit_dim6 = [10, 3, 80];
 list_finding_orbit_dim50 = [10, 80];
 list_finding_orbit_dim150 = [10, 80];
 list_finding_orbit_dim400 = [10, 80];
-R1 = randn(dim,dim);
-R2 = perturbation * randn(dim,dim);
+
+% definition of the full matrix 
 W = @(a) R1 - R1.' + a * eye(dim) + R2;
-
 dalphaW = @(a) eye(dim);
-
 dalphalphaW = @(a) zeros(dim,dim);
 phi = randi([-5,5],[dim,1]);
 phi = phi/norm(phi);
@@ -43,7 +89,7 @@ dalphaf = @(x,a) der_alpha_RHS(x, W(a), dalphaW(a));
 dxalphaf = @(x, a) der_alpha_xRHS(x, W(a), dalphaW(a));
 dxxfv = @(x, a, v) dir_der2RHS(x, W(a), v);
 
-% full Hopf problem
+% full Hopf problem - wrappers 
 F = @(X) wrapper_Hopf(X, dim, f, df, phi);
 DF = @(X) wrapper_DHopf(X, dim, df, dxxfv, dalphaf, dxalphaf, phi);
 
@@ -54,17 +100,16 @@ solutions = [];
 poor_solutions = [];
 
 
-% getting a better equilibrium for the ODE
-x = zeros(size(W(1), 1),1); % system status
+% equilibrium for the ODE
 alpha = 0;
-
+x = zeros(size(W(1), 1),1); 
 x = Newton(@(x)f(x,alpha), @(x)df(x,alpha), x);
 
 % at the found equilibrium, find the best eigenpair
 [V,L] = eigs(df(x, alpha), dim);
 
+% loop through eigenpairs to find associated Hopf bifurcations
 for i = 1:dim
-
     eigenval_imag = imag(L(i,i));
     
     % rotate the eigenvector to fit the linear scaling
@@ -80,20 +125,24 @@ for i = 1:dim
     try
         [X]=Newton(F, DF, X);
         if log(norm(X))<10
-            if size(solutions,1)<1 || max(abs(solutions(:,1)-X(1)))>10^-7
+            if size(solutions,1)<1 || min(abs(solutions(:,1)-X(1)))>10^-7
                 solutions(end+1,:) = X;
-                fprintf('A Hopf bifurcation has been found\n')
-            end
+                % fprintf('A Hopf bifurcation has been found\n')
+            end 
         else
-            fprintf('Newton converged but the norm is too large to be trusted, norm = %e\n', norm(X))
+            % fprintf('Newton converged but the norm is too large to be trusted, norm = %e\n', norm(X))
             poor_solutions(end+1,:) = X;
         end
     catch
-        error('No Hopf bifurcation found')
+        % error('No Hopf bifurcation found')
     end
     
 end
-
+fprintf('Finished the numerical search, %i numerical solutions found out of %i expected.\n', size(solutions,1), floor(dim/2))
+if validation
+ fprintf('Starting the validation now.\n')
+end
+% set up for validation loop - storage 
 number_of_positive_stab = 0;
 number_of_negative_stab = 0;
 not_proven = 0;
@@ -104,8 +153,7 @@ positive_lyap = intval([]);
 negative_lyap = intval([]);
 unproven = [];
 
-fprintf('Finished the numerical search, now the validation starts\n', size(solutions,1))
-
+% set up for validation proof - problem dependent derivatives
 ddfv = @(x, a, v) dir_der2RHS(x, W(a), v);
 dddfvw = @(x, a, v, w) dir_der3RHS(x, W(a), v, w);
 bool_val = 1;
@@ -115,10 +163,12 @@ dalphaxxf = @(x, a, v) der_x_x_alpha_RHS(x, W(a), dalphaW(a), v);
 dalphaalphaf = @(x, a)der_alpha_alpha_RHS(x, W(a), dalphaW(a), dalphalphaW(a));
 dalphaalphaxf = @(x, a, v) der_x_alpha_alpha_RHS(x, W(a), dalphaW(a), dalphalphaW(a));
 
-for i = 1: size(solutions,1)*validation
+% validation loop
+for i = 1: size(solutions,1)*(validation~=0)
     solution = solutions(i,:);
     X = solution.';
     try
+        % Validation - including computation of first Lyapunov coeff
         [x_star,lambda_star,eigenvec,eigenval, l1] = ...
             algebraic_hopf(f,df,ddfv,dddfvw, dalphaf, dxalphaf,dalphaxxf, dalphaalphaf,dalphaalphaxf, dim,X,phi,bool_val);
         if l1>0
@@ -135,46 +185,59 @@ for i = 1: size(solutions,1)*validation
         not_proven = not_proven+1;
         unproven(end+1) = i;
     end
+    if dim >= 10 && mod(i,5)==0
+        fprintf('Validated %i Hopf bifurcations out of %i.\n', i, size(solutions,1))
+    end
 end
 if ~isempty(unproven)
     fprintf('We could not prove %i bifurcations\n',length(unproven));
-else
+elseif validation
     fprintf('We could validate all Hopf bifurcations\n');
 end
 
+% visualization : find last Hopf bifurcation
 x = solutions(1:end,2+(1:dim));
 bifurcation_values = solutions(1:end,1);
 [alpha_big, index] = max(bifurcation_values);
 eigenvec  = solutions(1:end,2+dim+(1:dim))+ 1i*solutions(1:end,2+2*dim+(1:dim));
 eigenvec_plot = eigenvec(index,:);
 plotting_dim = min(dim, 6);
+% plot by finding the best orbit close to the expected periodic
+% orbit generated by the last Hopf bifurcation
 figure
 [t,y] = ode45(@(t,x) f(x, alpha_big), [0,500], x(index,:) + sqrt(01000) * abs(eigenvec(2,:)));
 plot(t, y(:,1:plotting_dim), 'LineWidth',3)
 set(gca,'FontSize',18)
 figure
-[t,y] = ode45(@(t,x) -f(x, alpha_big), [0,150], x(index,:) + sqrt(0.10) * abs(eigenvec(2,:)));
+[~,y] = ode45(@(t,x) -f(x, alpha_big), [0,150], x(index,:) + sqrt(0.10) * abs(eigenvec(2,:)));
 [t,y] = ode45(@(t,x) f(x, alpha_big), [0,150], y(end,:));
 plot(t, y(:,1:plotting_dim),'LineWidth',3)
 set(gca,'FontSize',18)
-%plot_bifurcation_diag(f, solutions(1:2:end,2+(1:dim)),solutions(1:2:end,1), ...
-%    solutions(1:2:end,2+dim+(1:dim))+ 1i*solutions(1:2:end,2+2*dim+(1:dim)))
 
-% case 1
-if dim == 6
+% special plots for cases presented in paper
+if dim == 6 && seed == 80
     figure
-    [t,y] = ode45(@(t,x) -f(x, alpha_big), [0,150], x(index,:) + sqrt(0.10) * abs(eigenvec(2,:)));
+    [~,y] = ode45(@(t,x) -f(x, alpha_big), [0,150], x(index,:) + sqrt(0.10) * abs(eigenvec(2,:)));
     [t,y] = ode45(@(t,x) f(x, alpha_big), [0,100], y(end,:));
     plot(t(300:end)-t(300), y(300:end,1:plotting_dim),'LineWidth',3)
     set(gca,'FontSize',18)
-elseif dim == 50
+elseif dim == 50 && seed == 80
     figure
-    [t,y] = ode45(@(t,x) -f(x, alpha_big), [0,150], x(index,:) + sqrt(0.10) * abs(eigenvec(2,:)));
+    [~,y] = ode45(@(t,x) -f(x, alpha_big), [0,150], x(index,:) + sqrt(0.10) * abs(eigenvec(2,:)));
     [t,y] = ode45(@(t,x) f(x, alpha_big), [0,45], y(end,:));
     plot(t(1700:end)-t(1700), y(1700:end,1:plotting_dim),'LineWidth',3)
     set(gca,'FontSize',18)
+elseif dim == 400 && seed == 80
+    figure
+    [~,y] = ode45(@(t,x) -f(x, alpha_big), [0,150], x(index,:) + sqrt(0.10) * abs(eigenvec(2,:)));
+    [t,y] = ode45(@(t,x) f(x, alpha_big), [0,20], y(end,:));
+    plot(t, y(:,1:plotting_dim),'LineWidth',3)
+    set(gca,'FontSize',18)
 end
 
+end
+
+% all needed functionalities
 
 function [alpha, eigenval_imag, x, eigenvec_real, eigenvec_imag] = split_into_elements(X, dim)
 if length(X) ~= 3*dim+2
@@ -203,8 +266,6 @@ end
 function h_dot = asym_rhs(varargin)
 % INPUT: h, W, gamma, b
 [h, W_minus_gamma, b] = test_input(varargin{:});
-
-I = eye(size(W_minus_gamma,1));
 
 h_dot = tanh( W_minus_gamma * h + b);
 end
@@ -306,4 +367,32 @@ end
 if nargin < 3
     b = 0;
 end
+end
+
+
+
+function plot_bifurcation_diag(f, x, alpha, eigenvec)
+% unused because unreliable
+figure
+iters = 500;
+amplitudes = zeros(length(alpha), iters);
+stepsize = 10^-4;
+for i = 1:length(alpha)
+    previous_orbit = x(i,:);
+    for j = 1:iters
+        dist_bif = j*stepsize;
+        alpha_iter = alpha(i) + dist_bif;
+        if j < 10
+            epsilon = sqrt(dist_bif);
+            [amplitude, end_orbit] = detect_amplitude(@(x)-f(x,alpha_iter), x(i,:), x(i,:) + epsilon * real(eigenvec), 3000, 0);
+        else
+            [amplitude, end_orbit] = detect_amplitude(@(x)-f(x,alpha_iter), x(i,:), previous_orbit, 100, 10^-6);
+        end
+        amplitudes(i,j) = amplitude;
+        previous_orbit = end_orbit;   
+    end
+    plot(alpha(i) + (1:iters)*stepsize, amplitudes(i,:), 'b')
+    hold on
+end
+plot(alpha,0*alpha, 'r*')
 end
