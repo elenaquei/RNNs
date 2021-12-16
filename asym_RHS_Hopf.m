@@ -1,4 +1,4 @@
-function [solutions, positive_lyap_index, negative_lyap_index, positive_lyap, negative_lyap, unproven] = asym_RHS_Hopf(dim, varargin)
+function [R1, R2,solutions, positive_lyap_index, negative_lyap_index, positive_lyap, negative_lyap, unproven] = asym_RHS_Hopf(dim, varargin)
 % find Hopf bifurcation in AsymmetricRNN
 % This code generates a random dynamical system based on RNNs, then
 % numerically finds and validates Hopf bifurcations w.r.t. the
@@ -30,6 +30,8 @@ function [solutions, positive_lyap_index, negative_lyap_index, positive_lyap, ne
         defaultPerturbation = 0.1;
         defaultSeed = 80;
         defaultValidation = 1;
+        defaultR1 = zeros(dim, dim);
+        defaultR2 = zeros(dim, dim);
 
         p = inputParser;
         validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x > 0);
@@ -37,22 +39,27 @@ function [solutions, positive_lyap_index, negative_lyap_index, positive_lyap, ne
         addOptional(p,'perturbation',defaultPerturbation,validScalarPosNum);
         addOptional(p,'validation',defaultValidation,validInteger);
         addOptional(p,'seed',defaultSeed,validInteger);
-        parse(p,dim,varargin{:});
-        perturbation = p.Results.perturbation;
-        validation = p.Results.validation;
-        seed = p.Results.seed;
-
-        rng('default')
-        rng(seed)
-        defaultR1 = randn(dim, dim);
-        defaultR2 = perturbation * randn(dim, dim);
         validMatrix = @(x) isnumeric(x) && size(x,1) == dim && size(x,2) == dim && length(size(x))==2;
         addParameter(p,'R1',defaultR1,validMatrix);
         addParameter(p,'R2',defaultR2,validMatrix);
         parse(p,dim,varargin{:});
-        
+        perturbation = p.Results.perturbation;
+        validation = p.Results.validation;
+        seed = p.Results.seed;
         R1 = p.Results.R1;
         R2 = p.Results.R2;
+        
+        rng('default')
+        rng(seed)
+        
+        if max(abs(R1))==0
+        	R1 = randn(dim, dim);
+        end
+        if max(abs(R2))==0
+        	R2 = perturbation * randn(dim, dim);
+        end
+        %parse(p,dim,varargin{:});
+        
 
         if mod(dim,2)==1 && perturbation == 0
             warning('This endeavor would be unsuccessful - skew symmetric matrices of odd dimensions are singular and a non-zero perturbation is needed')
@@ -215,7 +222,7 @@ figure
 plot(t, y(:,1:plotting_dim),'LineWidth',3)
 set(gca,'FontSize',18)
 
-plot_bifurcation_diag(f, x, bifurcation_values, eigenvec)
+%plot_bifurcation_diag(f, x, bifurcation_values, eigenvec)
 
 % special plots for cases presented in paper
 if dim == 6 && seed == 80
