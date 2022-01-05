@@ -23,14 +23,31 @@ W = R1 - R1.' + R2;
 
 % this system is then analysed in MatCont, and the periodic orbits
 % generated for the Hopf bifurcations are followed, thus giving
-load('H_LC(1).mat')
+load('H_LC(1)_small.mat')
 figure;
+ndim=4;
 M=max(x(1:ndim:end-2,:));
 plot(x(end,:),M, 'LineWidth',2)
 hold on
-load('H_LC(2).mat')
+load('H_LC(2)_small.mat')
 M=max(x(1:ndim:end-2,:));
 plot(x(end,:),M, 'LineWidth',2)
+set(gca,'FontSize',12)
+xlabel('${\gamma}$','interpreter','latex')
+ylabel('amplitude','interpreter','latex')
+
+
+ndim=20;
+figure;
+% should be a loop on 10 elements, but some are repeated
+for j = 1:11
+    string = sprintf('H_LC(%s)_big.mat',num2str(j));
+    load(string)
+    M=max(x(1:ndim:end-2,:));
+    plot(x(end,:),M, 'LineWidth',2)
+    hold on
+end
+
 set(gca,'FontSize',12)
 xlabel('${\gamma}$','interpreter','latex')
 ylabel('amplitude','interpreter','latex')

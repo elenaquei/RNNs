@@ -83,8 +83,8 @@ list_finding_orbit_dim150 = [10, 80];
 list_finding_orbit_dim400 = [10, 80];
 
 % definition of the full matrix 
-W = @(a) R1 - R1.' + a * eye(dim) + R2;
-dalphaW = @(a) eye(dim);
+W = @(a) R1 - R1.' - a * eye(dim) + R2;
+dalphaW = @(a) - eye(dim);
 dalphalphaW = @(a) zeros(dim,dim);
 phi = randi([-5,5],[dim,1]);
 phi = phi/norm(phi);
