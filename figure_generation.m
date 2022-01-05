@@ -37,10 +37,24 @@ xlabel('${\gamma}$','interpreter','latex')
 ylabel('amplitude','interpreter','latex')
 
 
+
+[R1, R2,solutions, positive_lyap_index, negative_lyap_index,...
+    positive_lyap, negative_lyap, unproven] = asym_RHS_Hopf(20, ...
+    'perturbation', 0.1, 'seed', 80, 'validation', 0);
+gammas = solutions(:,1);
+figure; plot(sort(gammas))
+W = R1 - R1.'+ R2;
+
+[string_system, string_variables] = mat2ODEstr(W);
+fprintf(string_system)
+fprintf('\n\n')
+% fprintf(string_variables)
+% fprintf('\n\n')
+
 ndim=20;
 figure;
 % should be a loop on 10 elements, but some are repeated
-for j = 1:11
+for j = 1:13
     string = sprintf('H_LC(%s)_big.mat',num2str(j));
     load(string)
     M=max(x(1:ndim:end-2,:));
