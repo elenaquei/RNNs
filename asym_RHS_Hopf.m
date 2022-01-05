@@ -222,7 +222,7 @@ figure
 plot(t, y(:,1:plotting_dim),'LineWidth',3)
 set(gca,'FontSize',18)
 
-%plot_bifurcation_diag(f, x, bifurcation_values, eigenvec)
+% plot_bifurcation_diag(f, x, bifurcation_values, eigenvec)
 
 % special plots for cases presented in paper
 if dim == 6 && seed == 80

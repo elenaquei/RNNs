@@ -10,7 +10,7 @@ dim=(length(X)-2)/3;
 x=X(2+(1:dim)); % the variables from the model
 v1=X(2+dim+(1:dim)); v2=X(2+2*dim+(1:dim)); % The real and imaginary parts of the eigenvector
 
-one=ones(dim,1);%[1;1];
+one=infsup(-ones(dim,1),ones(dim,1));%[1;1];
 
 DalphaxFn = dalphaxf(x,alpha);
 DalphaxxFnV1 = dalphaxxf(x,alpha,v1);

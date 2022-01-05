@@ -66,8 +66,11 @@ if rank(DF)-size(DF,1)<0
 end
 
 A=inv(DF);
+DF = intval(DF);
+A = intval(A);
 
 % start intlab
+F=F_general_Hopf(f,intval(X),phi,df);
 Y = norm(A*F);
 
 Z1 = norm( eye(length(X)) - A *DF);
