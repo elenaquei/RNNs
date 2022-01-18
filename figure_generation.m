@@ -54,7 +54,7 @@ fprintf('\n\n')
 ndim=20;
 figure;
 % should be a loop on 10 elements, but some are repeated
-for j = 1:13
+for j = 1:10
     string = sprintf('H_LC(%s)_big.mat',num2str(j));
     load(string)
     M=max(x(1:ndim:end-2,:));
@@ -62,6 +62,6 @@ for j = 1:13
     hold on
 end
 
-set(gca,'FontSize',12)
-xlabel('${\gamma}$','interpreter','latex')
-ylabel('amplitude','interpreter','latex')
+set(gca,'FontSize',16)
+xlabel('${\gamma}$','interpreter','latex','FontSize',21)
+ylabel('amplitude','interpreter','latex','FontSize',21)
