@@ -1,14 +1,28 @@
 % figure generation for paper "PLACEHOLDER',  E. Queirolo, C. Kuehn
 
-asym_RHS_Hopf(6, 'perturbation', 0.1, 'seed', 80, 'validation', 0);
+[R1, R2,sol]=asym_RHS_Hopf(6, 'perturbation', 0.1, 'seed', 80, 'validation', 0);
+[fig_divergent, fig_transient] =visualisation_asym_RHS_Hopf(sol, 80, R1, R2);
+saveas(fig_transient,'dim6_transient','epsc')
+saveas(fig_divergent,'dim6_divergent','epsc')
 
-asym_RHS_Hopf(50, 'perturbation', 0.1, 'seed', 80, 'validation', 0);
+[R1, R2,sol]=asym_RHS_Hopf(50, 'perturbation', 0.1, 'seed', 80, 'validation', 0);
+[fig_divergent, fig_transient] =visualisation_asym_RHS_Hopf(sol, 80,R1, R2);
+saveas(fig_transient,'dim50_transient','epsc')
+saveas(fig_divergent,'dim50_divergent','epsc')
 
-asym_RHS_Hopf(150, 'perturbation', 0.1, 'seed', 80, 'validation', 0);
+% [R1, R2,sol]=asym_RHS_Hopf(150, 'perturbation', 0.1, 'seed', 80, 'validation', 1);
+% [fig_divergent, fig_transient] =visualisation_asym_RHS_Hopf(sol, 80,R1, R2);
+% not in the paper
 
-asym_RHS_Hopf(400, 'perturbation', 0.1, 'seed', 80, 'validation', 0);
+[R1, R2,sol]=asym_RHS_Hopf(400, 'perturbation', 0.1, 'seed', 80, 'validation', 0); % change to validation
+[fig_divergent, fig_transient] =visualisation_asym_RHS_Hopf(sol, 80,R1, R2);
+saveas(fig_transient,'dim400_transient','epsc')
+saveas(fig_divergent,'dim400_divergent','epsc')
 
-asym_RHS_Hopf(50, 'perturbation', 0.1, 'seed', 120, 'validation', 0);
+[R1, R2,sol, positive_lyap_index, negative_lyap_index, positive_lyap, negative_lyap, unproven]=asym_RHS_Hopf(50, 'perturbation', 0.1, 'seed', 120, 'validation', 0);
+[fig_divergent, fig_transient] = visualisation_asym_RHS_Hopf(sol, 120,R1, R2, unproven(1));
+saveas(fig_transient,'dim50_singular1','epsc')
+saveas(fig_divergent,'dim50_singular2','epsc')
 
 R1 =[0.0820    1.9805   -1.0459   -0.9195
     0.6341    0.7433   -0.9086    0.1274
@@ -51,9 +65,9 @@ fprintf('\n\n')
 % fprintf(string_variables)
 % fprintf('\n\n')
 
+% data from MatCont is saved, here only direct plotting
 ndim=20;
 figure;
-% should be a loop on 10 elements, but some are repeated
 for j = 1:10
     string = sprintf('H_LC(%s)_big.mat',num2str(j));
     load(string)
