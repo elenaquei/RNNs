@@ -1,4 +1,5 @@
-% figure generation for paper "PLACEHOLDER',  E. Queirolo, C. Kuehn
+% figure generation for paper "Computer Validation of Neural Network 
+% Dynamics: A First Case Study',  E. Queirolo, C. Kuehn, 2022
 
 [R1, R2,sol]=asym_RHS_Hopf(6, 'perturbation', 0.1, 'seed', 80, 'validation', 0);
 [fig_divergent, fig_transient] =visualisation_asym_RHS_Hopf(sol, 80, R1, R2);
