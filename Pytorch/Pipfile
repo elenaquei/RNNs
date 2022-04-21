@@ -1,0 +1,21 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+tensorflow = "*"
+torch = "*"
+torchaudio = "*"
+torchvision = "*"
+torchdyn = "*"
+pytorch_lightning = "*"
+jax = "*"
+jaxlib = "*"
+matplotlib = "*"
+numpy = "1.22"
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"
