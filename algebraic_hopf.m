@@ -142,7 +142,7 @@ df_mat_int=df(midrad(x,rmin),midrad(alpha,rmin));
 all_eigs=diag(all_beta);
 [min_diff,index_beta]=min(all_eigs-(1i*eigenval_imag));
 if min_diff > rmin
-    error('What is this??')
+    error('What is this case? Investigate')
 end
 q_new=all_q(:,index_beta);
 % verification of the eigenvalue
