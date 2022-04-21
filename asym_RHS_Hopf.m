@@ -320,7 +320,10 @@ y = W_minus_gamma* x;
 tanh_prime = 1 - tanh(y).^2;
 tanh_doupbleprime = -2 * tanh(y).*tanh_prime;
 
-dxxxfvw = -2 * diag(tanh_prime + tanh(y).*tanh_doupbleprime) * diag(W_minus_gamma * v) * diag(W_minus_gamma * w);
+% old version
+% dxxxfvw = -2 * diag(tanh_prime + tanh(y).*tanh_doupbleprime) * diag(W_minus_gamma * v) * diag(W_minus_gamma * w);
+
+dxxxfvw = diag(-2+8*tanh(y).^2 - 6*tanh(y).^4) * diag(W_minus_gamma * v) * diag(W_minus_gamma * w)*W_minus_gamma;
 end
 
 
@@ -363,3 +366,31 @@ for i = 1:length(alpha)
 end
 plot(alpha,0*alpha, 'r*')
 end
+
+
+
+
+
+function stupid_LC(mu)
+if nargin<1
+    mu = 2.3;
+end
+
+xn = rand();
+epsilon = 10^-5;
+y0n = infsup(x0+epsilon, x0+epsilon);
+y1n = infsup(x0-epsilon, x0-epsilon);
+f =@(x) mu * x * (1-x);
+
+for i = 1:100
+    xn = f(xn);
+    y0n = f(y0n);
+    y1n = f(y1n);
+end
+
+disp(inf(abs(y0n-xn)))
+disp(inf(abs(y1n-xn)))
+
+end
+
+
