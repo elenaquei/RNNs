@@ -1,6 +1,6 @@
 % figure generation for paper "PLACEHOLDER',  E. Queirolo, C. Kuehn
 
-[R1, R2,sol]=asym_RHS_Hopf(6, 'perturbation', 0.1, 'seed', 80, 'validation', 0);
+[R1, R2,sol]=asym_RHS_Hopf(6, 'perturbation', 0.1, 'seed', 80, 'validation', 1);
 [fig_divergent, fig_transient] =visualisation_asym_RHS_Hopf(sol, 80, R1, R2);
 saveas(fig_transient,'dim6_transient','epsc')
 saveas(fig_divergent,'dim6_divergent','epsc')
@@ -19,10 +19,9 @@ saveas(fig_divergent,'dim50_divergent','epsc')
 saveas(fig_transient,'dim400_transient','epsc')
 saveas(fig_divergent,'dim400_divergent','epsc')
 
-[R1, R2,sol, positive_lyap_index, negative_lyap_index, positive_lyap, negative_lyap, unproven]=asym_RHS_Hopf(50, 'perturbation', 0.1, 'seed', 120, 'validation', 0);
+[R1, R2,sol, ~, ~, ~, ~, unproven]=asym_RHS_Hopf(50, 'perturbation', 0.1, 'seed', 120, 'validation', 1);
 [fig_divergent, fig_transient] = visualisation_asym_RHS_Hopf(sol, 120,R1, R2, unproven(1));
-saveas(fig_transient,'dim50_singular1','epsc')
-saveas(fig_divergent,'dim50_singular2','epsc')
+saveas(fig_transient,'dim50_singular','epsc')
 
 R1 =[0.0820    1.9805   -1.0459   -0.9195
     0.6341    0.7433   -0.9086    0.1274
@@ -38,7 +37,7 @@ W = R1 - R1.' + R2;
 % this system is then analysed in MatCont, and the periodic orbits
 % generated for the Hopf bifurcations are followed, thus giving
 load('H_LC(1)_small.mat')
-figure;
+fig_4D = figure;
 ndim=4;
 M=max(x(1:ndim:end-2,:));
 plot(x(end,:),M, 'LineWidth',2)
@@ -46,9 +45,11 @@ hold on
 load('H_LC(2)_small.mat')
 M=max(x(1:ndim:end-2,:));
 plot(x(end,:),M, 'LineWidth',2)
-set(gca,'FontSize',12)
-xlabel('${\gamma}$','interpreter','latex')
-ylabel('amplitude','interpreter','latex')
+set(gca,'FontSize',16)
+xlabel('${\gamma}$','interpreter','latex','FontSize',21)
+ylabel('amplitude','interpreter','latex','FontSize',21)
+
+saveas(fig_4D,'bifurcation_diagram_4D','epsc')
 
 
 
@@ -67,7 +68,7 @@ fprintf('\n\n')
 
 % data from MatCont is saved, here only direct plotting
 ndim=20;
-figure;
+fig_20D = figure;
 for j = 1:10
     string = sprintf('H_LC(%s)_big.mat',num2str(j));
     load(string)
@@ -79,3 +80,6 @@ end
 set(gca,'FontSize',16)
 xlabel('${\gamma}$','interpreter','latex','FontSize',21)
 ylabel('amplitude','interpreter','latex','FontSize',21)
+
+saveas(fig_20D,'bifurcation_diagram_20D','epsc')
+
