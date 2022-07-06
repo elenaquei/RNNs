@@ -320,7 +320,7 @@ y = W_minus_gamma* x;
 tanh_prime = 1 - tanh(y).^2;
 tanh_doupbleprime = -2 * tanh(y).*tanh_prime;
 
-% old version
+% old version - WRONG
 % dxxxfvw = -2 * diag(tanh_prime + tanh(y).*tanh_doupbleprime) * diag(W_minus_gamma * v) * diag(W_minus_gamma * w);
 
 dxxxfvw = diag(-2+8*tanh(y).^2 - 6*tanh(y).^4) * diag(W_minus_gamma * v) * diag(W_minus_gamma * w)*W_minus_gamma;

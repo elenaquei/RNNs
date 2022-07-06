@@ -1,4 +1,5 @@
-function [R1, R2,solutions, positive_lyap_index, negative_lyap_index, positive_lyap, negative_lyap, unproven] = asym_sin_RHS_Hopf(dim, varargin)
+function [R1, R2,solutions, positive_lyap_index, negative_lyap_index, ...
+    positive_lyap, negative_lyap, unproven] = asym_sin_RHS_Hopf(dim, varargin)
 % find Hopf bifurcation in AsymmetricRNN
 % This code generates a random dynamical system based on RNNs, then
 % numerically finds and validates Hopf bifurcations w.r.t. the
@@ -22,7 +23,7 @@ function [R1, R2,solutions, positive_lyap_index, negative_lyap_index, positive_l
 %
 % OUTPUTS
 %
-% solutions     each column is a numerical solution, stored as 
+% solutions     each row is a numerical solution, stored as 
 %               alpha, eigenval_imag, x, eigenvec_real, eigenvec_imag
 % positive_lyap_index, negative_lyap_index, positive_lyap, negative_lyap, unproven
 
