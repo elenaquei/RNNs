@@ -12,8 +12,9 @@ torchdyn = "*"
 pytorch_lightning = "*"
 jax = "*"
 jaxlib = "*"
-matplotlib = "*"
-numpy = "1.22"
+seaborn = "==0.11.1"
+numpy  = "1.20.2"
+matplotlib = "3.4.2"
 
 [dev-packages]
 
