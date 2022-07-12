@@ -122,15 +122,22 @@ def debug_tests():
 
 if __name__ == "__main__":
     iters = 200
-    lyap_vec = np.zeros([iters])
-    for i in range(iters):
-        dim = 40
-        W_mat = np.random.random([dim, dim])
-        perturbation = 0.*np.random.random([dim, dim])
-        Id = np.identity(dim)
-        gamma = 0.001
-        W_mat = W_mat.T - W_mat + gamma*Id + perturbation
-        lyap_vec[i] = detect_lyap_on_RNNmat(W_mat, time=300)
-    plt.hist(lyap_vec, bins=50)
-    plt.title('300, no perturbation')
-    plt.show()
+    time = 300
+    for power in range(0, -5, -1):
+        epsilon = 10**power
+        lyap_vec = np.zeros([iters])
+        for i in range(iters):
+            dim = 40
+            W_mat = np.random.random([dim, dim])
+            perturbation = epsilon*np.random.random([dim, dim])
+            Id = np.identity(dim)
+            gamma = 0.001
+            W_mat = W_mat.T - W_mat + gamma*Id + perturbation
+            lyap_vec[i] = detect_lyap_on_RNNmat(W_mat, time=time)
+        plt.hist(lyap_vec, bins=50)
+        plt.title('time = 30,'+str(epsilon)+' perturbation')
+        plt.ylabel('likelihood('+str(iters)+')')
+        plt.xlabel('approx lyap exp')
+        name = './perturbation_figures/power'+str(power)+'time'+str(time)
+        plt.savefig(name)
+        plt.show()
