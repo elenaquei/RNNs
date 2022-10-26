@@ -1,24 +1,31 @@
-function [R1, R2,solutions, positive_lyap_index, negative_lyap_index, positive_lyap, negative_lyap, unproven] = general_RHS_Hopf(dim, varargin)
-% find Hopf bifurcation in AsymmetricRNN
-% This code generates a random dynamical system based on RNNs, then
-% numerically finds and validates Hopf bifurcations w.r.t. the
-% hyperparameter.
+function [solutions, positive_lyap_index, negative_lyap_index, positive_lyap, negative_lyap, unproven] = general_RHS_Hopf(dim, nonlin_struct, lin_struct, validation)
+% find Hopf bifurcation in the generic system defined by the composition of
+% an elemntwise function "nonlin_struct" and a function "lin_struct".
+% The naming convention comes from the RNNs defiuned by sigma \compose W(t)
 % This code refers to the paper "PLACEHOLDER" by E. Queirolo and C. Kuehn
 %
-% function asym_RHS_Hopf(dim, varargin)
-% can be called with additional info
-% perturbation (DEFAULT 0.1), R1 and R2, or seed (DEFAULT 80)
-% 
-% Examples
-% asym_RHS_Hop(10)
-% asym_RHS_Hopf(10, 'seed', 4)
-% asym_RHS_Hopf(4, 'perturbation', 0.01)
-% asym_RHS_Hopf(6, 'perturbation', 10^-4)
-% asym_RHS_Hopf(100, 'R1', R1, 'R2', R2) where R1 and R2 are square
-%                                           matrices of same size
-% combination of inputs is also possible, such as
+% function asym_RHS_Hopf(dim, nonlin_struct, lin_struct)
 %
-% asym_RHS_Hopf(10, 'perturbation', 0.4, 'R1', R1, 'seed', 7)
+% INPUTS
+% dim           integer, dimension of the system
+% nonlin_struct, lin_struct functions, called without arguments they return
+%               their derivatives
+% validation    bool, if results are validated (DEFAULT = 1)
+% nonlin_struct() returns elementwise functions
+%     @(y) nonlin(y)    
+%     @(y) d_nonlin(y)
+%     @(y) dd_nonlin(y)
+%     @(y) ddd_nonlin(y)
+% lin_struct() returns
+%     @(x, par) lin(x, par) returning a vector of length dim
+%     @(x, par) d_x_lin(x, par) returning a square matrix of size (dim, dim)
+%     @(x, par) d_par_lin(x, par) returning a vector of length dim
+%     @(x, par) d_parpar_lin(x, par) returning a vector of length dim
+%     @(x, par) d_xpar_lin(x, par) returning a square matrix of size (dim, dim)
+%     @(x, par, y) d_xx_lin(x, par) returning a square matrix of size (dim, dim)
+%     @(x, par, y, z) d_xxx_lin(x, par) returning a square matrix of size (dim, dim)
+% where x, y, z are vectors of length dim and par is a parameter of size 1
+% and y and z are the directions for the directional derivatives.
 %
 % OUTPUTS
 %
@@ -26,74 +33,15 @@ function [R1, R2,solutions, positive_lyap_index, negative_lyap_index, positive_l
 %               par, eigenval_imag, x, eigenvec_real, eigenvec_imag
 % positive_lyap_index, negative_lyap_index, positive_lyap, negative_lyap, unproven
 
-    function [dim, seed, R1, R2, validation] = input_parse(dim, varargin)
-        defaultPerturbation = 0.1;
-        defaultSeed = 80;
-        defaultValidation = 1;
-        defaultR1 = zeros(dim, dim);
-        defaultR2 = zeros(dim, dim);
+if nargin < 4 || isempty(validation)
+    validation = 1;
+end
 
-        p = inputParser;
-        validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x > 0);
-        validInteger = @(x) isnumeric(x) && isscalar(x) && (mod(x,1) ==0);
-        addOptional(p,'perturbation',defaultPerturbation,validScalarPosNum);
-        addOptional(p,'validation',defaultValidation,validInteger);
-        addOptional(p,'seed',defaultSeed,validInteger);
-        validMatrix = @(x) isnumeric(x) && size(x,1) == dim && size(x,2) == dim && length(size(x))==2;
-        addParameter(p,'R1',defaultR1,validMatrix);
-        addParameter(p,'R2',defaultR2,validMatrix);
-        parse(p,dim,varargin{:});
-        perturbation = p.Results.perturbation;
-        validation = p.Results.validation;
-        seed = p.Results.seed;
-        R1 = p.Results.R1;
-        R2 = p.Results.R2;
-        
-        rng('default')
-        rng(seed)
-        
-        if max(abs(R1))==0
-        	R1 = randn(dim, dim);
-        end
-        if max(abs(R2))==0
-        	R2 = perturbation * randn(dim, dim);
-        end
-        %parse(p,dim,varargin{:});
-        
-
-        if mod(dim,2)==1 && perturbation == 0
-            warning('This endeavor would be unsuccessful - skew symmetric matrices of odd dimensions are singular and a non-zero perturbation is needed')
-            perturbation = 10^-3;
-            fprintf('The perturbation is set to %f\n\n', perturbation);
-            R1 = randn(dim,dim);
-            R2 = perturbation * randn(dim,dim);
-        end
-    end
-
-% inout parsing and definition of ystem parameters
-[dim, seed, R1, R2, validation] = input_parse(dim, varargin{:});
 
 % definition of the full matrix 
-W = @(x, a) (R1 - R1.' + a * eye(dim) + R2) * x;
-d_x_W = @(x, a) R1 - R1.' + a * eye(dim) + R2;
-d_par_W = @(x, a) x;
-d_parpar_W = @(x, y, a) zeros(dim,1);  % since it doesn't depend on input, quite some flexibility
-d_xpar_W = @(x, y, a) eye(dim, dim);
-d_xx_W = @(x, y, a) zeros(dim, dim);
-d_xxx_W = @(x, y, v, a) zeros(dim, dim);
+[W, d_x_W, d_par_W, d_parpar_W, d_xpar_W, d_xx_W, d_xxx_W] = lin_struct();
 
-% or:
-% row = floor(dim/2)+1; col = floor(dim/3) +1;
-% W_ij = zeros(dim,dim); W_ij(row, col) = 1;
-% % if antisym, then also
-% % W_ij(col, row) = -1;
-% d_par_W = @(x, par) W_ij * x;
-% d_parpar_W = @(x, y, a) zeros(dim, 1);
-
-nonlin = @(x) tanh(x);
-d_nonlin = @(x) 1-tanh(x).^2;
-dd_nonlin = @(x) - 2*tanh(x).*(1-tanh(x).^2);
-ddd_nonlin = @(x) - 2 + 8 * tanh(x).^2 - 6 * tanh(x).^4;
+[nonlin, d_nonlin, dd_nonlin, ddd_nonlin] = nonlin_struct();
 
 phi = randi([-5,5],[dim,1]);
 phi = phi/norm(phi);
