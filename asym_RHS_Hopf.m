@@ -96,6 +96,17 @@ dalphaf = @(x,a) der_alpha_RHS(x, W(a), dalphaW(a));
 dxalphaf = @(x, a) der_alpha_xRHS(x, W(a), dalphaW(a));
 dxxfv = @(x, a, v) dir_der2RHS(x, W(a), v);
 
+% TESTS
+% x =rand(dim,1);
+% a = 89;
+% size(f(x,a))
+% size(df(x,a))
+% size(dalphaf(x,a))
+% size(dxalphaf(x,a))
+% size(dxxfv(x,a, x))
+% R1 = dxxfv(x,a, x);
+% return
+
 % full Hopf problem - wrappers 
 F = @(X) wrapper_Hopf(X, dim, f, df, phi);
 DF = @(X) wrapper_DHopf(X, dim, df, dxxfv, dalphaf, dxalphaf, phi);
@@ -109,7 +120,7 @@ poor_solutions = [];
 
 % equilibrium for the ODE
 alpha = 0;
-x = zeros(size(W(1), 1),1); 
+x = zeros(dim,1); 
 x = Newton(@(x)f(x,alpha), @(x)df(x,alpha), x);
 
 % at the found equilibrium, find the best eigenpair
@@ -170,14 +181,30 @@ dalphaxxf = @(x, a, v) der_x_x_alpha_RHS(x, W(a), dalphaW(a), v);
 dalphaalphaf = @(x, a)der_alpha_alpha_RHS(x, W(a), dalphaW(a), dalphalphaW(a));
 dalphaalphaxf = @(x, a, v) der_x_alpha_alpha_RHS(x, W(a), dalphaW(a), dalphalphaW(a));
 
+% % TESTS
+% x =rand(dim,1);
+% y =rand(dim,1);
+% v =rand(dim,1);
+% a = 89;
+% size(dddfvw(x,a, y, v))
+% R1 = dddfvw(x,a, y, v);
+% return
+
+
 % validation loop
 for i = 1: size(solutions,1)*(validation~=0)
     solution = solutions(i,:);
     X = solution.';
+    
     try
         % Validation - including computation of first Lyapunov coeff
         [x_star,lambda_star,eigenvec,eigenval, l1] = ...
             algebraic_hopf(f,df,ddfv,dddfvw, dalphaf, dxalphaf,dalphaxxf, dalphaalphaf,dalphaalphaxf, dim,X,phi,bool_val);
+        
+        %[x_star,lambda_star,eigenvec,eigenval, l1] = ...
+        %    algebraic_hopf_simple(f,df,dxxfv,dddfvw,dalphaf, dxalphaf,...
+        %    dim,X,phi,bool_val);
+        
         if l1>0
             number_of_positive_stab = number_of_positive_stab+1;
             positive_lyap_index(end+1) = i;
