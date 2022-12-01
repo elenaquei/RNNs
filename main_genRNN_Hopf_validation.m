@@ -16,34 +16,93 @@ dim = 6;
 
 
 % definition of the nonlinear and linear part in the functions below
+disp('Example 1: tanh with asymRNN')
 linearfunc = lin_struct_asymRNN(dim, R1, R2);
 nonlin = tanhnonlin();
-general_RHS_Hopf(dim, nonlin, linearfunc)
+[sol_tanh_asym, ~, ~, ~, ~, unproven] = general_RHS_Hopf(dim, nonlin, linearfunc);
 
-% definition of the nonlinear and linear part in the functions below
-linearfunc = lin_struct_asymRNN(dim, R1, R2);
-nonlin = sinnonlin();
-general_RHS_Hopf(dim, nonlin, linearfunc)
+% % definition of the nonlinear and linear part in the functions below
+% disp('Example 2: sin with asymRNN')
+% linearfunc = lin_struct_asymRNN(dim, R1, R2);
+% nonlin = sinnonlin();
+% general_RHS_Hopf(dim, nonlin, linearfunc);
+% 
+% 
+% % second example: AsymmetricRNN w.r.t. a "Random" weight
+% disp('Example 3: tanh with a weight in asymRNN')
+% dim = 6;
+% row = 2;
+% col = 6;
+% linearfunc = lin_struct_asymRNN_weights(dim, R1, R2, row, col);
+% nonlin = tanhnonlin();
+% general_RHS_Hopf(dim, nonlin, linearfunc);
+% 
+% 
+% % third example: AsymmetricRNN w.r.t. a "Random" weight
+% disp('Example 4: tanh with a wieght that breaks the symmetry in asymRNN')
+% dim = 6;
+% row = 2;
+% col = 6;
+% linearfunc = lin_struct_RNN_weights(dim, R1, R2, row, col);
+% nonlin = tanhnonlin();
+% general_RHS_Hopf(dim, nonlin, linearfunc);
 
 
-% second example: AsymmetricRNN w.r.t. a "Random" weight
-dim = 6;
-row = 2;
-col = 6;
-linearfunc = lin_struct_asymRNN_weights(dim, R1, R2, row, col);
-nonlin = tanhnonlin();
-general_RHS_Hopf(dim, nonlin, linearfunc)
 
 
-% third example: AsymmetricRNN w.r.t. a "Random" weight
-dim = 6;
-row = 2;
-col = 6;
-linearfunc = lin_struct_RNN_weights(dim, R1, R2, row, col);
-nonlin = tanhnonlin();
-general_RHS_Hopf(dim, nonlin, linearfunc)
 
 
+% DERIVATIVES TEST
+% [xHopf, pHopf] = extractSol(sol_tanh_asym,2);
+linearfunc_nodir = lin_struct_asymRNN_nodir(dim, R1, R2);
+% [lin, d_x_lin, d_par_lin, d_xpar_lin, d_xx_lin] = linearfunc();
+% feval(d_x_lin, xHopf.',pHopf)
+% feval(lin, xHopf.',pHopf)
+% 
+% out = all_ders(tanhnonlin_nodir, linearfunc);
+% jacobian = out{3};
+% feval(jacobian, 0, xHopf', pHopf);
+
+
+for index = 1:size(sol_tanh_asym,1)
+    if any(unproven == index)
+        continue
+    end
+    [xHopf, pHopf] = extractSol(sol_tanh_asym,index);
+    opt=contset;opt=contset(opt,'Singularities',1);
+    opt = contset(opt,'MaxNumPoints',30);
+    [x0,v0]=init_EP_EP(@() all_ders(tanhnonlin_nodir, linearfunc_nodir),xHopf.',pHopf-.1,[1]);
+    
+    [x,v,s,h,f]=cont(@equilibrium,x0,[],opt);
+    
+    x1=x(1:dim,s(2).index);
+    par=x(end,s(2).index);
+    
+    opt = contset(opt,'MaxNumPoints',1300);
+    
+    [x0,v0]=init_H_LC(@() all_ders(tanhnonlin_nodir, linearfunc_nodir),x1,par,[1],1e-3,20,4);
+    
+    opt = contset(opt,'Multipliers',1);
+    opt = contset(opt,'Adapt',1);
+    
+    [xlc,vlc,slc,hlc,flc]=cont(@limitcycle,x0,v0,opt);
+    
+    figure
+    axes
+    plotcycle(xlc,vlc,slc,[size(xlc,1) 1 2]);
+end
+
+
+
+
+
+% _______________________________
+%     
+%       FUNCTION DEFINITIONS
+% _______________________________
+
+
+% % % NONLINEARITIES 
 
 % hyperbolic tangent with derivatives
     function nonlin = tanhnonlin()
@@ -71,6 +130,40 @@ general_RHS_Hopf(dim, nonlin, linearfunc)
     end
 
 
+
+% ----- derivatives with full dimensionality (no dir vectors)
+    function tens = diagonal_tensor(vec)
+        tens = zeros(dim, dim, dim);
+        for i = 1:dim
+            tens(i,i,i)= vec(i);
+        end
+    end
+
+% hyperbolic tangent with derivatives
+    function nonlin = tanhnonlin_nodir()
+        nonlin = @tanh_nonlin;
+        function [nonlin, d_nonlin, dd_nonlin] = tanh_nonlin()
+            nonlin = @(x) tanh(x); % vector in R^dim
+            d_nonlin = @(x) diag(1-tanh(x).^2); % square matrix in R^dimx dim
+            dd_nonlin = @(x) diagonal_tensor(- 2*tanh(x).*(1-tanh(x).^2)); % tensor in R^dim x dim x dim
+        end
+    end
+
+
+% sine with derivatives
+    function nonlin = sinnonlin_nodir()
+        nonlin = @sin_nonlin;
+        function [nonlin, d_nonlin, dd_nonlin, ddd_nonlin] = sin_nonlin()
+            
+            nonlin = @(x) sin(x);
+            d_nonlin = @(x) diag(cos(x));
+            dd_nonlin = @(x) diagonal_tensor( - sin(x));
+        end
+    end
+
+
+
+% % % LINEAR PARTS
 
 % AsymmetricRNN with respect to the identity shift
     function linearfunc = lin_struct_asymRNN(dim, R1, R2)
@@ -137,8 +230,150 @@ end
     end
 
 
+% ----- derivatives with full dimensionality (no dir vectors)
+
+% AsymmetricRNN with respect to the identity shift
+    function linearfunc = lin_struct_asymRNN_nodir(dim, R1, R2)
+        linearfunc = @linear_func;
+        function [W, d_x_W, d_par_W, d_xpar_W, d_xx_W] = linear_func()
+            W = @(x, a) (R1 - R1.' + a * eye(dim) + R2) * x;
+            d_x_W = @(x, a) R1 - R1.' + a * eye(dim) + R2;
+            d_par_W = @(x, a) x;
+            d_xpar_W = @(x, a) eye(dim, dim);
+            d_xx_W = @(x, a) zeros(dim, dim, dim);
+        end
+    end
+
+% AsymmetricRNN with respect to a weight
+    function linfunc = lin_struct_asymRNN_weights_nodir(dim, R1, R2, row, col)
+        linfunc = @linear_func;
+        function [W, d_x_W, d_par_W, d_xpar_W, d_xx_W] = linear_func()
+            if nargin < 2 || isempty(col)
+                col = floor(dim/3) +1;
+            end
+            if nargin < 1 || isempty(row)
+                row = floor(dim/2)+1;
+            end
+            W = @(x, a) (R1 - R1.' + a * eye(dim) + R2) * x;
+            d_x_W = @(x, a) R1 - R1.' + a * eye(dim) + R2;
+            d_xpar_W = @(x, a) eye(dim, dim);
+            d_xx_W = @(x, a) zeros(dim, dim, dim);
+            
+            W_ij = zeros(dim,dim);
+            W_ij(row, col) = 1;
+            % if antisym, then also
+            W_ij(col, row) = -1;
+            d_par_W = @(x, par) W_ij * x;
+        end
+end
+
+% generic RNN with respect to the identity shift
+    function linfunc = lin_struct_RNN_weights_nodir(dim, R1, R2, row, col)
+        linfunc = @linearfunc;
+        function [W, d_x_W, d_par_W, d_xpar_W, d_xx_W] = linearfunc()
+            if nargin < 2 || isempty(col)
+                col = floor(dim/3) +1;
+            end
+            if nargin < 1 || isempty(row)
+                row = floor(dim/2)+1;
+            end
+            W = @(x, a) (R1 - R1.' + a * eye(dim) + R2) * x;
+            d_x_W = @(x, a) R1 - R1.' + a * eye(dim) + R2;
+            d_xpar_W = @(x, a) eye(dim, dim);
+            d_xx_W = @(x, a) zeros(dim, dim, dim);
+            
+            W_ij = zeros(dim,dim);
+            W_ij(row, col) = 1;
+            % % if antisym, then also
+            % W_ij(col, row) = -1;
+            d_par_W = @(x, par) W_ij * x;
+            
+        end
+    end
 
 
+% combine derivatives with full dimensionality - output compatible with
+% MatCont
+    function out = all_ders(sigma, W)
+        % gives derivatives of Sigma composed W
+        %
+        % Sigma returns 
+        
+        [sigma_f, d_x_sigma, d_xx_sigma] = sigma();
+        [W_f, d_x_W, d_par_W, d_xpar_W, d_xx_W] = W();
+        
+        out{1} = @init;
+        out{2} = @fun_eval;
+        out{3} = @jacobian;
+        out{4} = @jacobianp;
+        out{5} = @hessians;
+        out{6} = @hessiansp;
+        out{7} = [];
+        out{8} = [];
+        out{9} = [];
+        function dydt = fun_eval(t,x,par)
+            dydt = sigma_f(W_f(x,par));
+        end
+        % --------------------------------------------------------------------------
+        function [tspan,y0,options] = init
+            y0=zeros(dim,1);
+            handles = feval(all_ders(sigma,W));
+            options = odeset('Jacobian',handles(3),'JacobianP',handles(4),'Hessians',handles(5),'HessiansP',handles(6));
+            tspan = [0 10];
+        end
+        % --------------------------------------------------------------------------
+        function jac = jacobian(t,x, par)
+            jac= d_x_sigma(W_f(x,par))*d_x_W(x,par);
+        end
+        % --------------------------------------------------------------------------
+        function jacp = jacobianp(t,x,par)
+            jacp = d_x_sigma(W_f(x,par)) * d_par_W(x,par);
+        end
+        % --------------------------------------------------------------------------
+        function hess = hessians(t,x,par)
+            Jw = d_x_W(x,par);
+            Hsigma = d_xx_sigma(W_f(x,par)); 
+            Jsigma = d_x_sigma(W_f(x,par));
+            Hw = d_xx_W(x,par);
+            
+            hess = zeros(dim,dim,dim);
+            
+            for j = 1:dim
+                for l = 1:dim
+                    for m = 1:dim
+                        second_term_jlm = 0;
+                        for k1 = 1:dim
+                            second_term_jlm = second_term_jlm + sum(squeeze(Hsigma(j,k1,:)).*Jw(k1,l).*squeeze(Jw(:,m)));
+                        end
+                        hess(j,l,m) = sum(Jsigma(j,:).*squeeze(Hw(:,l,m)).') + second_term_jlm;
+                    end
+                end
+            end
+            
+        end
+        % --------------------------------------------------------------------------
+        function hessp = hessiansp(t,x, par)
+            
+            Jw = d_x_W(x,par);
+            Jsigma = d_x_sigma(W_f(x,par));
+            HpW = d_xpar_W(x,par);
+            Hsigma = d_xx_sigma(W_f(x,par));
+            JpW = d_par_W(x,par);
+            
+            Hsigma_JpW = zeros(dim,dim);
+            for i = 1:dim
+                for j = 1:dim
+                    Hsigma_JpW(i,j) = sum(squeeze(Hsigma(i,j,:)) .* JpW(:));
+                end
+            end
+            
+            
+            hessp = Jsigma * HpW + Hsigma_JpW * Jw;
+            
+        end
+    end
+
+% INPUT PARSER
 
     function [dim, R1, R2, validation] = input_parse(dim, varargin)
         defaultPerturbation = 0.1;
@@ -146,7 +381,7 @@ end
         defaultValidation = 1;
         defaultR1 = zeros(dim, dim);
         defaultR2 = zeros(dim, dim);
-
+        
         p = inputParser;
         validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x > 0);
         validInteger = @(x) isnumeric(x) && isscalar(x) && (mod(x,1) ==0);
@@ -184,4 +419,15 @@ end
         end
     end
 
+% extract solutions from data given by general_RHS_Hopf
+    function [x,p] = extractSol(sol, index)
+        if nargin < 2 || isempty(index)
+            index = 1;
+        end
+        % each row of sol is: par, eigenval_imag, x, eigenvec_real, eigenvec_imag
+        p = sol(index, 1);
+        x = sol(index, 2 +(1:dim));
+    end
+
 end
+

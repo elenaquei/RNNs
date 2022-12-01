@@ -1,3 +1,5 @@
+# from http://implicit-layers-tutorial.org/neural_odes/ accessed last 30th Nov 2022
+
 import jax.numpy as jnp
 import numpy.random as npr
 from jax import jit, grad
@@ -64,6 +66,7 @@ fine_inputs = jnp.reshape(jnp.linspace(-3.0, 3.0, 100), (100, 1))
 ax.plot(fine_inputs, resnet(resnet_params, fine_inputs, resnet_depth), lw=0.5, color='blue')
 ax.set_xlabel('input')
 ax.set_ylabel('output')
+plt.show()
 
 
 def nn_dynamics(state, time, params):
@@ -110,6 +113,7 @@ ax.plot(fine_inputs, resnet(resnet_params, fine_inputs, resnet_depth), lw=0.5, c
 ax.plot(fine_inputs, batched_odenet(odenet_params, fine_inputs), lw=0.5, color='red')
 ax.set_xlabel('input')
 ax.set_ylabel('output')
-plt.legend(('Resnet predictions', 'ODE Net predictions'))
+plt.legend(('data','Resnet predictions', 'ODE Net predictions'))
+plt.show()
 
 print('End')

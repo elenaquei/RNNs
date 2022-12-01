@@ -1,4 +1,4 @@
-function [x_star,lambda_star,eigenvec,eigenval, l1] = ...
+function [x,par,eigenvec,eigenval, l1] = ...
     algebraic_hopf_simple(f,df,ddf,dddf,dalphaf, dalphaxf,...
     N,X,phi,bool_val)
  
@@ -51,19 +51,22 @@ if norm(F)>10^-6
     [X]=newton_Hopf(f,X,phi);
 end
 
-alpha=X(1); % Parameter 
+par=X(1); % Parameter 
 eigenval_imag=X(2); % distance of the complex conjugate eigs from the real axis
 
 x=X(2+(1:N)); % the variables from the model
 eigenvec_real=X(N+2+(1:N)); 
 eigenvec_imag=X(2*N+2+(1:N)); % The real and imaginary parts of the eigenvector
 
+eigenvec = eigenvec_real+1i*eigenvec_imag;
+eigenval = 1i*eigenval_imag;
+
 %%%% validation
 % for the validation, the exact derivative of f is necessary
-DF = Df_Hopf(f, df, ddf, dalphaf, dalphaxf, phi, alpha, eigenval_imag, x, eigenvec_real, eigenvec_imag);
-if rank(DF)-size(DF,1)<0
-    error('Derivative not invertible')
-end
+DF = Df_Hopf(f, df, ddf, dalphaf, dalphaxf, phi, par, eigenval_imag, x, eigenvec_real, eigenvec_imag);
+% if rank(DF)-size(DF,1)<0 % too prone to errors
+%     error('Derivative not invertible')
+% end
 
 A=inv(DF);
 DF = intval(DF);
@@ -80,7 +83,7 @@ R = 0.3; % first approximation of the maximum radius
 % XandR=infsup(X-R,X+R);
 % DDF= second_derivative_F(XandR,ddf,dddf, dalphaxf, dalphaxxf, dalphaalphaf, dalphaalphaxf);
 ball_R = @(val) infsup(val-R,val+R);
-DF_ball = Df_Hopf(f, df, ddf, dalphaf, dalphaxf, ball_R(phi), ball_R(alpha),...
+DF_ball = Df_Hopf(f, df, ddf, dalphaf, dalphaxf, ball_R(phi), ball_R(par),...
     ball_R(eigenval_imag), ball_R(x), ball_R(eigenvec_real), ball_R(eigenvec_imag));
 
 Z2 = norm(A) * norm(DF_ball - DF);
@@ -105,30 +108,19 @@ end
 % r=linspace(0,1.3*rmax,100);
 % plot(r,pol(r),'b',rmin,0,'ok',rmax,0,'or');
 
-l1 = first_lyapunov(df, ddf, dddf, x, alpha, abs(eigenval_imag), rmin, bool_val);
+l1 = first_lyapunov(df, ddf, dddf, x, par, abs(eigenval_imag), rmin, bool_val);
 
 st = dbstack();
 if length(st)<2  % print only if called directly
-    if all(abs(x)>10^-3) && abs(alpha)>10^-3
-        fprintf('SUCCESS\n The Hopf bifurcation at [%1.3f,%1.3f], %1.3f has been verified\n',x(1),x(2),alpha)
+    if all(abs(x)>10^-3) && abs(par)>10^-3
+        fprintf('SUCCESS\n The Hopf bifurcation at [%1.3f,%1.3f], %1.3f has been verified\n',x(1),x(2),par)
     else
-        fprintf('SUCCESS\n The Hopf bifurcation at [%1.3e,%1.3e], %1.3e has been verified\n',x(1),x(2),alpha)
+        fprintf('SUCCESS\n The Hopf bifurcation at [%1.3e,%1.3e], %1.3e has been verified\n',x(1),x(2),par)
     end
     fprintf('with a radius of %e to %e and Lyapunov coefficient %1.3f +/- %1.1e\n\n',rmin, rmax, mid(l1), rad(l1))
 end
 
-x_star = X(2+(1:N));
-lambda_star = X(1);
-eigenvec = eigenvec_real+1i*eigenvec_imag;
-eigenval = 1i*eigenval_imag;
-if l1>0
-    stability = 1;
-else
-    stability = -1;
-end
-
 return
-
 
 end
 

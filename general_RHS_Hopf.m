@@ -29,7 +29,7 @@ function [solutions, positive_lyap_index, negative_lyap_index, positive_lyap, ne
 %
 % OUTPUTS
 %
-% solutions     each column is a numerical solution, stored as 
+% solutions     each row is a numerical solution, stored as 
 %               par, eigenval_imag, x, eigenvec_real, eigenvec_imag
 % positive_lyap_index, negative_lyap_index, positive_lyap, negative_lyap, unproven
 
