@@ -17,7 +17,7 @@ while (k<=200) && (norm(F(x))> tol)
     % display(['||x_n - x_(n+1)|| = ',num2str(norm(oldX-x))])
     k=k+1;
 end
-DF_inv = inv(DF(x_in));
+% DF_inv = inv(DF(x_in));
 % display(['||F(x)|| = ',num2str(norm(F(x))),', Newton iterations = ',num2str(k),', ||inv(DF)|| = ',num2str(norm(DF_inv))])
 x_out = x;
 if any(isnan(F(x))) || norm(F(x))>tol

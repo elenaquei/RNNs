@@ -1,4 +1,7 @@
 % figure generation for paper "PLACEHOLDER',  E. Queirolo, C. Kuehn
+addpath '/Users/queirolo/Desktop/MatCont7p3'
+init();
+
 
 [R1, R2,sol]=asym_RHS_Hopf(6, 'perturbation', 0.1, 'seed', 80, 'validation', 1);
 [fig_divergent, fig_transient] =visualisation_asym_RHS_Hopf(sol, 80, R1, R2);

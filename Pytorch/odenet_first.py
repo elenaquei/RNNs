@@ -45,7 +45,7 @@ def resnet_update(params, inputs, targets):
 
 # Toy 1D dataset.
 inputs = jnp.reshape(jnp.linspace(-2.0, 2.0, 10), (10, 1))
-targets = inputs ** 3 + 0.1 * inputs
+targets = inputs ** 3 + 0.2 * inputs
 
 # Hyperparameters.
 layer_sizes = [1, 20, 1]
@@ -58,7 +58,7 @@ resnet_params = init_random_params(param_scale, layer_sizes)
 for i in range(train_iters):
     resnet_params = resnet_update(resnet_params, inputs, targets)
 
-# Plot results.
+'''# Plot results.
 fig = plt.figure(figsize=(6, 4), dpi=150)
 ax = fig.gca()
 ax.scatter(inputs, targets, lw=0.5, color='green')
@@ -67,6 +67,7 @@ ax.plot(fine_inputs, resnet(resnet_params, fine_inputs, resnet_depth), lw=0.5, c
 ax.set_xlabel('input')
 ax.set_ylabel('output')
 plt.show()
+'''
 
 
 def nn_dynamics(state, time, params):
@@ -83,7 +84,7 @@ def odenet(params, input):
 batched_odenet = vmap(odenet, in_axes=(None, 0))
 
 # We need to change the input dimension to 2, to allow time-dependent dynamics.
-odenet_layer_sizes = [2, 20, 1]
+odenet_layer_sizes = [2, 17, 1]
 
 
 def odenet_loss(params, inputs, targets):
@@ -113,7 +114,7 @@ ax.plot(fine_inputs, resnet(resnet_params, fine_inputs, resnet_depth), lw=0.5, c
 ax.plot(fine_inputs, batched_odenet(odenet_params, fine_inputs), lw=0.5, color='red')
 ax.set_xlabel('input')
 ax.set_ylabel('output')
-plt.legend(('data','Resnet predictions', 'ODE Net predictions'))
+plt.legend(('data', 'Resnet predictions', 'ODE Net predictions'))
 plt.show()
 
 print('End')

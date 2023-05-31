@@ -1,5 +1,5 @@
 function [x,par,eigenvec,eigenval, l1] = ...
-    algebraic_hopf_simple(f,df,ddf,dddf,dalphaf, dalphaxf,...
+    algebraic_hopf_inputF(F_general_Hopf,Df_Hopf,...
     dim,X,phi,bool_val)
  
 %function [x_star,lambda_star,eigenvec,eigenval] = ...
@@ -143,9 +143,9 @@ if min_diff > rmin
 end
 q_new=all_q(:,index_beta);
 % verification of the eigenvalue
-[l_ver,q_ver]=verifyeig(df_mat_int,(1i*eigenval_imag),q_new);
+[l,q]=verifyeig(df_mat_int,(1i*eigenval_imag),q_new);
 
-if isnan(l_ver)
+if isnan(l)
     error('Linear validation failed')
 end
 
@@ -154,9 +154,9 @@ all_eigs=diag(all_beta);
 [~,index_beta]=min(all_eigs+(1i*eigenval_imag));
 p=all_p(:,index_beta);
 % verification of the eigenvalue
-[l_ver,p]=verifyeig(df_mat_int.',-(1i*eigenval_imag),p);
+[l,p]=verifyeig(df_mat_int.',-(1i*eigenval_imag),p);
 
-if isnan(l_ver)
+if isnan(l)
     error('Linear validation failed')
 end
 
@@ -167,23 +167,17 @@ complex_product=@(a,b) sum(conj(a).*b);
 % k = k1 + i k2
 
 % k1/k2
-ratio = real(complex_product(p,q_ver))/imag(complex_product(p,q_ver));
-k2 = 1/( ratio* real(complex_product(p,q_ver))+imag(complex_product(p,q_ver)));
+ratio = real(complex_product(p,q))/imag(complex_product(p,q));
+k2 = 1/( ratio* real(complex_product(p,q))+imag(complex_product(p,q)));
 k1= k2*ratio;
 
 p=(k1+1i*k2)*p;
 
-x_ver=midrad(x,rmin);
 beta_ver=infsup(eigenval_imag-rmin,eigenval_imag+rmin);
-alpha_ver=midrad(alpha,rmin);
+
 % compute the first lyapunov coefficient
-try
-ddf_ver = ddf(x_ver,alpha_ver,q_ver);
-catch
-    ddf_ver = tensor_prod(ddf(x_ver,alpha_ver), q_ver);
-end
-l1 = 1/(2*beta_ver.^2) * real(1i*complex_product(p,ddf_ver*q_ver)*complex_product(p,ddf_ver*conj(q_ver))+...
-    beta_ver*complex_product(p,dddf(x_ver,alpha_ver,q_ver,q_ver)*conj(q_ver)));
+l1 = 1/(2*beta_ver.^2) * real(1i*complex_product(p,ddf(x,alpha,q)*q)*complex_product(p,ddf(x,alpha,q)*conj(q))+...
+    beta_ver*complex_product(p,dddf(x,alpha,q,q)*conj(q)));
 
 % OLD:
 %l1 = 1/(2*beta_ver) * real(1i*complex_product(p,ddf(zeros(N,1),q,q)*complex_product(p,ddf(zeros(N,1),q,conj(q))))+...
@@ -211,6 +205,4 @@ for i=1:length(all_eigs)
 
 end
 end
-
-
 
