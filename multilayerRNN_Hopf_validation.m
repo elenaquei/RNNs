@@ -107,10 +107,7 @@ for index = 1:size(sol_tanh_asym,1)
     
     [x0,v0]=init_H_LC(@() all_ders(linearfunc, nonlin, dim),x1,par,[1],1e-3,20,4);
     
-    opt = contset(opt,'Multipliers',1);
-    opt = contset(opt,'Adapt',1);
-    
-    [xlc,vlc,slc,hlc,flc]=cont(@limitcycle,x0,v0,opt);
+    [xlc,vlc,slc,hlc,flc]=cont(@limitcycle,x0,v0);
     
     figure
     axes
@@ -336,78 +333,6 @@ end
         % Sigma returns 
         out = allders(W, sigma, dims);
         out{7} = [];
-%         [sigma_f, d_x_sigma, d_xx_sigma] = sigma();
-%         [W_f, d_x_W, d_par_W, d_xpar_W, d_xx_W] = W();
-%         
-%         out{1} = @init;
-%         out{2} = @fun_eval;
-%         out{3} = @jacobian;
-%         out{4} = @jacobianp;
-%         out{5} = @hessians;
-%         out{6} = @hessiansp;
-%         out{7} = [];
-%         out{8} = [];
-%         out{9} = [];
-%         function dydt = fun_eval(t,x,par)
-%             dydt = sigma_f(W_f(x,par));
-%         end
-%         % --------------------------------------------------------------------------
-%         function [tspan,y0,options] = init
-%             y0=zeros(dim,1);
-%             handles = feval(all_ders(sigma,W));
-%             options = odeset('Jacobian',handles(3),'JacobianP',handles(4),'Hessians',handles(5),'HessiansP',handles(6));
-%             tspan = [0 10];
-%         end
-%         % --------------------------------------------------------------------------
-%         function jac = jacobian(t,x, par)
-%             jac= d_x_sigma(W_f(x,par))*d_x_W(x,par);
-%         end
-%         % --------------------------------------------------------------------------
-%         function jacp = jacobianp(t,x,par)
-%             jacp = d_x_sigma(W_f(x,par)) * d_par_W(x,par);
-%         end
-%         % --------------------------------------------------------------------------
-%         function hess = hessians(t,x,par)
-%             Jw = d_x_W(x,par);
-%             Hsigma = d_xx_sigma(W_f(x,par)); 
-%             Jsigma = d_x_sigma(W_f(x,par));
-%             Hw = d_xx_W(x,par);
-%             
-%             hess = zeros(dim,dim,dim);
-%             
-%             for j = 1:dim
-%                 for l = 1:dim
-%                     for m = 1:dim
-%                         second_term_jlm = 0;
-%                         for k1 = 1:dim
-%                             second_term_jlm = second_term_jlm + sum(squeeze(Hsigma(j,k1,:)).*Jw(k1,l).*squeeze(Jw(:,m)));
-%                         end
-%                         hess(j,l,m) = sum(Jsigma(j,:).*squeeze(Hw(:,l,m)).') + second_term_jlm;
-%                     end
-%                 end
-%             end
-%             
-%         end
-%         % --------------------------------------------------------------------------
-%         function hessp = hessiansp(t,x, par)
-%             
-%             Jw = d_x_W(x,par);
-%             Jsigma = d_x_sigma(W_f(x,par));
-%             HpW = d_xpar_W(x,par);
-%             Hsigma = d_xx_sigma(W_f(x,par));
-%             JpW = d_par_W(x,par);
-%             
-%             Hsigma_JpW = zeros(dim,dim);
-%             for i = 1:dim
-%                 for j = 1:dim
-%                     Hsigma_JpW(i,j) = sum(squeeze(Hsigma(i,j,:)) .* JpW(:));
-%                 end
-%             end
-%             
-%             
-%             hessp = Jsigma * HpW + Hsigma_JpW * Jw;
-%             
-%         end
     end
 
 % INPUT PARSER
