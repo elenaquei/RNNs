@@ -9,7 +9,7 @@
 function multilayerRNN_Hopf_validation(dim, varargin)
 
 if nargin == 0
-    dim = [6]; %for antysimmetry, we need same dimensions
+    dim = [6, 6]; %for antysimmetry, we need same dimensions
 end
 n_layers = length(dim);
 
@@ -28,20 +28,8 @@ linearfunc = cell(length(dim), 1);
 for iter = 1:length(dim)
     linearfunc{iter} = multilayer_lin_struct_asymRNN(dim(iter), R1{iter}, R2{iter});
 end
-% testing sizes
-% f1 = linearfunc{1};[a,b]= f1();
-% f2 = linearfunc{2};
 
-nonlin = tanhnonlin();
-out = allders(linearfunc, nonlin, dim);
-% testing allders
-% out1 = out{1};
-% out2 = out{2};
-% out3 = out{3};
-% out4 = out{4};
-% out5 = out{5};
-% out6 = out{6};
-% out7 = out{7};
+% unit_test_2layers()
 
 
 [sol_tanh_asym, ~, ~, ~, ~, unproven] = totallygeneral_RHS_Hopf(dim(1), out);
@@ -71,22 +59,6 @@ out = allders(linearfunc, nonlin, dim);
 % linearfunc = lin_struct_RNN_weights(dim, R1, R2, row, col);
 % nonlin = tanhnonlin();
 % general_RHS_Hopf(dim, nonlin, linearfunc);
-
-
-
-
-
-
-% DERIVATIVES TEST
-% [xHopf, pHopf] = extractSol(sol_tanh_asym,2);
-linearfunc_nodir = lin_struct_asymRNN_nodir(dim, R1, R2);
-% [lin, d_x_lin, d_par_lin, d_xpar_lin, d_xx_lin] = linearfunc();
-% feval(d_x_lin, xHopf.',pHopf)
-% feval(lin, xHopf.',pHopf)
-% 
-% out = all_ders(tanhnonlin_nodir, linearfunc);
-% jacobian = out{3};
-% feval(jacobian, 0, xHopf', pHopf);
 
 
 for index = 1:size(sol_tanh_asym,1)
@@ -152,52 +124,14 @@ end
     end
 
 
-
-% ----- derivatives with full dimensionality (no dir vectors)
-    function tens = diagonal_tensor(vec)
-        tens = zeros(dim, dim, dim);
-        for iter1 = 1:dim
-            tens(iter1,iter1,iter1)= vec(iter1);
-        end
-    end
-
-% hyperbolic tangent with derivatives
-    function nonlin = tanhnonlin_nodir()
-        nonlin = @tanh_nonlin;
-        function [nonlin, d_nonlin, dd_nonlin] = tanh_nonlin()
-            nonlin = @(x) tanh(x); % vector in R^dim
-            d_nonlin = @(x) diag(1-tanh(x).^2); % square matrix in R^dimx dim
-            dd_nonlin = @(x) diagonal_tensor(- 2*tanh(x).*(1-tanh(x).^2)); % tensor in R^dim x dim x dim
-        end
-    end
-
-
-% sine with derivatives
-    function nonlin = sinnonlin_nodir()
-        nonlin = @sin_nonlin;
-        function [nonlin, d_nonlin, dd_nonlin, ddd_nonlin] = sin_nonlin()
-            
-            nonlin = @(x) sin(x);
-            d_nonlin = @(x) diag(cos(x));
-            dd_nonlin = @(x) diagonal_tensor( - sin(x));
-        end
-    end
-
-
-
 % % % LINEAR PARTS
 
 % AsymmetricRNN with respect to the identity shift
     function linearfunc = lin_struct_asymRNN(dim, R1, R2)
         linearfunc = @linear_func;
-        function [W, d_x_W, d_par_W, d_parpar_W, d_xpar_W, d_xx_W, d_xxx_W] = linear_func()
-            W = @(x, a) (R1 - R1.' + a * eye(dim) + R2) * x;
-            d_x_W = @(x, a) R1 - R1.' + a * eye(dim) + R2;
-            d_par_W = @(x, a) x;
-            d_parpar_W = @(x, y, a) zeros(dim,1);
-            d_xpar_W = @(x, a) eye(dim, dim);
-            d_xx_W = @(x, a, y) zeros(dim, dim);
-            d_xxx_W = @(x, a, y, v) zeros(dim, dim);
+        function [W, d_par_W] = linear_func()
+            W = @(a) (R1 - R1.' + a * eye(dim) + R2) * x;
+            d_par_W = @(a) eye(dim);
         end
     end
 
@@ -215,112 +149,40 @@ end
 % AsymmetricRNN with respect to a weight
     function linfunc = lin_struct_asymRNN_weights(dim, R1, R2, row, col)
         linfunc = @linear_func;
-        function [W, d_x_W, d_par_W, d_parpar_W, d_xpar_W, d_xx_W, d_xxx_W] = linear_func()
+        function [W, d_par_W] = linear_func()
             if nargin < 2 || isempty(col)
                 col = floor(dim/3) +1;
             end
             if nargin < 1 || isempty(row)
                 row = floor(dim/2)+1;
             end
-            W = @(x, a) (R1 - R1.' + a * eye(dim) + R2) * x;
-            d_x_W = @(x, a) R1 - R1.' + a * eye(dim) + R2;
-            d_xpar_W = @(x, a) eye(dim, dim);
-            d_xx_W = @(x, a, y) zeros(dim, dim);
-            d_xxx_W = @(x, a, y, v) zeros(dim, dim);
+            W = @(a) (R1 - R1.' + a * eye(dim) + R2);
             
             W_ij = zeros(dim,dim);
             W_ij(row, col) = 1;
             % if antisym, then also
             W_ij(col, row) = -1;
-            d_par_W = @(x, par) W_ij * x;
-            d_parpar_W = @(x, y, a) zeros(dim, 1);
+            d_par_W = @(par) W_ij;
         end
 end
 
 % generic RNN with respect to the identity shift
     function linfunc = lin_struct_RNN_weights(dim, R1, R2, row, col)
         linfunc = @linearfunc;
-        function [W, d_x_W, d_par_W, d_parpar_W, d_xpar_W, d_xx_W, d_xxx_W] = linearfunc()
+        function [W, d_par_W] = linearfunc()
             if nargin < 2 || isempty(col)
                 col = floor(dim/3) +1;
             end
             if nargin < 1 || isempty(row)
                 row = floor(dim/2)+1;
             end
-            W = @(x, a) (R1 - R1.' + a * eye(dim) + R2) * x;
-            d_x_W = @(x, a) R1 - R1.' + a * eye(dim) + R2;
-            d_xpar_W = @(x, a) eye(dim, dim);
-            d_xx_W = @(x, a, y) zeros(dim, dim);
-            d_xxx_W = @(x, a, y, v) zeros(dim, dim);
+            W = @(a) (R1 - R1.' + a * eye(dim) + R2);
             
             W_ij = zeros(dim,dim);
             W_ij(row, col) = 1;
             % % if antisym, then also
             % W_ij(col, row) = -1;
-            d_par_W = @(x, par) W_ij * x;
-            d_parpar_W = @(x, y, a) zeros(dim, 1);
-        end
-    end
-
-
-% ----- derivatives with full dimensionality (no dir vectors)
-
-% AsymmetricRNN with respect to the identity shift
-    function linearfunc = lin_struct_asymRNN_nodir(dim, R1, R2)
-        linearfunc = @linear_func;
-        function [W, d_x_W, d_par_W, d_xpar_W, d_xx_W] = linear_func()
-            W = @(x, a) (R1 - R1.' + a * eye(dim) + R2) * x;
-            d_x_W = @(x, a) R1 - R1.' + a * eye(dim) + R2;
-            d_par_W = @(x, a) x;
-            d_xpar_W = @(x, a) eye(dim, dim);
-            d_xx_W = @(x, a) zeros(dim, dim, dim);
-        end
-    end
-
-% AsymmetricRNN with respect to a weight
-    function linfunc = lin_struct_asymRNN_weights_nodir(dim, R1, R2, row, col)
-        linfunc = @linear_func;
-        function [W, d_x_W, d_par_W, d_xpar_W, d_xx_W] = linear_func()
-            if nargin < 2 || isempty(col)
-                col = floor(dim/3) +1;
-            end
-            if nargin < 1 || isempty(row)
-                row = floor(dim/2)+1;
-            end
-            W = @(x, a) (R1 - R1.' + a * eye(dim) + R2) * x;
-            d_x_W = @(x, a) R1 - R1.' + a * eye(dim) + R2;
-            d_xpar_W = @(x, a) eye(dim, dim);
-            d_xx_W = @(x, a) zeros(dim, dim, dim);
-            
-            W_ij = zeros(dim,dim);
-            W_ij(row, col) = 1;
-            % if antisym, then also
-            W_ij(col, row) = -1;
-            d_par_W = @(x, par) W_ij * x;
-        end
-end
-
-% generic RNN with respect to the identity shift
-    function linfunc = lin_struct_RNN_weights_nodir(dim, R1, R2, row, col)
-        linfunc = @linearfunc;
-        function [W, d_x_W, d_par_W, d_xpar_W, d_xx_W] = linearfunc()
-            if nargin < 2 || isempty(col)
-                col = floor(dim/3) +1;
-            end
-            if nargin < 1 || isempty(row)
-                row = floor(dim/2)+1;
-            end
-            W = @(x, a) (R1 - R1.' + a * eye(dim) + R2) * x;
-            d_x_W = @(x, a) R1 - R1.' + a * eye(dim) + R2;
-            d_xpar_W = @(x, a) eye(dim, dim);
-            d_xx_W = @(x, a) zeros(dim, dim, dim);
-            
-            W_ij = zeros(dim,dim);
-            W_ij(row, col) = 1;
-            % % if antisym, then also
-            % W_ij(col, row) = -1;
-            d_par_W = @(x, par) W_ij * x;
-            
+            d_par_W = @(x, par) W_ij;
         end
     end
 
@@ -335,53 +197,6 @@ end
         out{7} = [];
     end
 
-% INPUT PARSER
-
-    function [dim, R1, R2, validation] = input_parse(dim, varargin)
-        defaultPerturbation = 0.1;
-        defaultSeed = 80;
-        defaultValidation = 1;
-        defaultR1 = zeros(dim, dim);
-        defaultR2 = zeros(dim, dim);
-        
-        p = inputParser;
-        validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x > 0);
-        validInteger = @(x) isnumeric(x) && isscalar(x) && (mod(x,1) ==0);
-        addRequired(p,'dimension',validInteger);
-        addOptional(p,'perturbation',defaultPerturbation,validScalarPosNum);
-        addOptional(p,'validation',defaultValidation,validInteger);
-        addOptional(p,'seed',defaultSeed,validInteger);
-        validMatrix = @(x) isnumeric(x) && size(x,1) == dim && size(x,2) == dim && length(size(x))==2;
-        addParameter(p,'R1',defaultR1,validMatrix);
-        addParameter(p,'R2',defaultR2,validMatrix);
-        parse(p,dim,varargin{:});
-        perturbation = p.Results.perturbation;
-        validation = p.Results.validation;
-        seed = p.Results.seed;
-        R1 = p.Results.R1;
-        R2 = p.Results.R2;
-        
-        disp('remember to fix this')
-        %rng('default')
-        %rng(seed)
-        
-        if max(abs(R1))==0
-        	R1 = randn(dim, dim);
-        end
-        if max(abs(R2))==0
-        	R2 = perturbation * randn(dim, dim);
-        end
-        %parse(p,dim,varargin{:});
-        
-
-        if mod(dim,2)==1 && perturbation == 0
-            warning('This endeavor would be unsuccessful - skew symmetric matrices of odd dimensions are singular and a non-zero perturbation is needed')
-            perturbation = 10^-3;
-            fprintf('The perturbation is set to %f\n\n', perturbation);
-            R1 = randn(dim,dim);
-            R2 = perturbation * randn(dim,dim);
-        end
-    end
 
 % extract solutions from data given by general_RHS_Hopf
     function [x,p] = extractSol(sol, index)
@@ -391,6 +206,49 @@ end
         % each row of sol is: par, eigenval_imag, x, eigenvec_real, eigenvec_imag
         p = sol(index, 1);
         x = sol(index, 2 +(1:dim));
+    end
+
+
+
+% unit testing - to run if anything changes
+    function unit_test_2layers()
+        % testing sizes
+        f1 = linearfunc{1};
+        [a,b]= f1();
+        if any(size(a(1)) ~= 6) || any(size(b(2)) ~= 6)
+            error('Wrong sizes')
+        end
+        f2 = linearfunc{2};
+        [a,b]= f2();
+        if any(size(a(1)) ~= 6) || any(size(b(2)) ~= 6)
+            error('Wrong sizes')
+        end
+        
+        nonlin = tanhnonlin();
+        out = allders(linearfunc, nonlin, dim);
+        % testing allders
+        out1 = out{1};
+        out2 = out{2}; % fun eval
+        out3 = out{3}; % DF
+        out4 = out{4}; % DpF
+        out5 = out{5}; % DxxF
+        out6 = out{6}; % DxpF
+        out7 = out{7}; % Dxxxfvw
+        
+        % multilayer test
+        p = rand;
+        x = rand(6,1);
+        W1 = R1{1} - R1{1}.' + p * eye(6) + R2{1};
+        W2 = R1{2} - R1{2}.' + p * eye(6) + R2{2};
+        fxp = @(x) tanh( W2 * tanh(W1 * x));
+        if norm(out2(x,p) - fxp(x))>10^-5
+            error('Wrong function')
+        end
+        % multilayer derivative test
+        DF_diff = (out3(x,p) - finite_diff_fn(fxp, x));
+        if norm(DF_diff)>10^-3
+            error('Wrong derivative')
+        end
     end
 
 end
