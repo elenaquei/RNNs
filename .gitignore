@@ -2,3 +2,7 @@
 *.eps
 
 .DS_Store
+
+start_matcont_QUEIROLO.m
+
+*.m~

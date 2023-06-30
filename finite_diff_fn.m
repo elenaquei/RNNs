@@ -4,8 +4,9 @@ if nargin<3 || isempty(h)
     h=1e-5;
 end
 M=length(x);
+N = length(feval(fn,x,varargin{:}));
 E=eye(M);
-Dfn=zeros(M);
+Dfn=zeros(N,M);
 for j=1:M
     xh=x+h*E(:,j);
     fnxh=feval(fn,xh, varargin{:}); fnx=feval(fn,x,varargin{:});

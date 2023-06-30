@@ -161,12 +161,14 @@ for i = 1: size(solutions,1)*(validation~=0)
             number_of_positive_stab = number_of_positive_stab+1;
             positive_lyap_index(end+1) = i;
             positive_lyap(end+1) = l1;
+            fprintf('%ith solution at %f is unstable!\n',i, lambda_star)
         else
             number_of_negative_stab = number_of_negative_stab+1;
             negative_lyap_index(end+1)= i;
             negative_lyap(end+1)= l1;
-            fprintf('Negative stability found!')
+            fprintf('%ith solution at %f is stable!\n',i, lambda_star)
         end
+        fprintf('   Lyapunov exponent: %f\n', l1.mid)
     catch
         not_proven = not_proven+1;
         unproven(end+1) = i;
@@ -178,7 +180,7 @@ end
 if ~isempty(unproven)
     fprintf('We could not prove %i bifurcations\n',length(unproven));
 elseif validation
-    fprintf('We could validate all Hopf bifurcations\n');
+    fprintf('We could validate all Hopf bifurcations\n\n');
 end
 
 end
