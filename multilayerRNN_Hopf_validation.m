@@ -6,7 +6,7 @@
 % This code tests genral_RHS_Hopf for RNN with multiple layers
 %
 
-function multilayerRNN_Hopf_validation(dim, n_case, varargin)
+function nargout = multilayerRNN_Hopf_validation(dim, n_case, varargin)
 
 if nargin == 0
     dim = [6, 6]; %for antysimmetry, we need same dimensions
@@ -32,6 +32,8 @@ switch n_case
             linearfunc{iter} = multilayer_lin_struct_asymRNN(dim(iter), R1{iter}, R2{iter});
         end
         nonlin = tanhnonlin();
+        nargout{1} = R1{1}; nargout{2} = R2{1};
+        
         % unit_test_1layer();
         
     case 2
@@ -41,6 +43,7 @@ switch n_case
             linearfunc{iter} = multilayer_lin_struct_asymRNN(dim(iter), R1{iter}, R2{iter});
         end
         nonlin = tanhnonlin();
+        
         % unit_test_2layers();
         
     case 3
@@ -52,7 +55,7 @@ switch n_case
         nonlin = sinnonlin();
         
     case 4
-        disp('Example 3: tanh with a weight in asymRNN')
+        disp('Example 4: tanh with a weight in the diag of asymRNN')
         dim = 6;
         row = 6;
         col = 6;
@@ -76,6 +79,17 @@ switch n_case
         end
         nonlin = tanhnonlin();
         
+    case 6
+        disp('Example 6: tanh with sparse weights')
+        dim = 6;
+        row = 3;
+        col = 3;
+        
+        linearfunc = cell(length(dim), 1);
+        for iter = 1:length(dim)
+            size_R1 = size(R1{iter});
+            sparse_factor = eye(size_R1) + (randn(size_R1)>0.6);
+            linearfunc{iter} = lin_struct_random_weights(dim, sparse_factor.*R1{iter}, row, col);
         end
         nonlin = tanhnonlin();
 end
