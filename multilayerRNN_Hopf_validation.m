@@ -63,15 +63,34 @@ switch n_case
             linearfunc{iter} = lin_struct_asymRNN_weights(dim(iter), R1{iter}, R2{iter}, gamma, row, col);
         end
         nonlin = tanhnonlin();
+    case 5
+        disp('Example 5: tanh with a weight off-diag in asymRNN')
+        dim = 6;
+        row = 3;
+        col = 6;
+        gamma = 10^-2;
+        
+        linearfunc = cell(length(dim), 1);
+        for iter = 1:length(dim)
+            linearfunc{iter} = lin_struct_asymRNN_weights(dim(iter), R1{iter}, R2{iter}, gamma, row, col);
+        end
+        nonlin = tanhnonlin();
+        
+        end
+        nonlin = tanhnonlin();
 end
 
 out = allders(linearfunc, nonlin, dim);
 
-% unit_test_2layers()
-
+if n_case == 2
+    %unit_test_2layers()
+end
 
 [sol_tanh_asym, ~, ~, ~, ~, unproven] = totallygeneral_RHS_Hopf(dim(1), out);
 
+if n_case ==1
+    nargout{3} = sol_tanh_asym;
+end
 
 % % second example: AsymmetricRNN w.r.t. a "Random" weight
 % disp('Example 3: tanh with a weight in asymRNN')
@@ -198,7 +217,7 @@ end
             if nargin < 1 || isempty(row)
                 row = floor(dim/2)+1;
             end
-            W_fixed = R1 - 0*R1.' + gamma * eye(dim) + R2;
+            W_fixed = R1 - R1.' + gamma * eye(dim) + R2;
             
             W_ij = zeros(dim); 
             W_ij(row, col) = 1;
@@ -229,6 +248,25 @@ end
         end
     end
 
+
+    function linfunc = lin_struct_random_weights(dim, R1, row, col)
+        linfunc = @linearfunc;
+        function [W, d_par_W] = linearfunc()
+            if nargin < 2 || isempty(col)
+                col = floor(dim/3) +1;
+            end
+            if nargin < 1 || isempty(row)
+                row = floor(dim/2)+1;
+            end
+            W = @(a) R1;
+            
+            W_ij = zeros(dim,dim);
+            W_ij(row, col) = 1;
+            % % if antisym, then also
+            % W_ij(col, row) = (col~=row)*-1;
+            d_par_W = @(x, par) W_ij;
+        end
+    end
 
 % combine derivatives with full dimensionality - output compatible with
 % MatCont

@@ -175,21 +175,14 @@ out{9} = [];
             hess = intval(hess);
         end
         
-        for i = 1:k
+        for l = 1:n
+            Hin_l = squeeze(Hin(:,:,l));
+            first_term_l = JsigmaW * Hin_l;
+            hess(:,:,l) = first_term_l;
             for j = 1:n
-                for l = 1:n
-                    first_term = sum(squeeze(JsigmaW(i,:)).'.*squeeze(Hin(:,j,l)));
-                    second_term_ijl = 0;
-                    % formally, for-loop on k1 and Hsigma(i,k1,:) but only 
-                    % Hsigma(i,i,i) is non-zero
-                    % the full term
-                    % sum(squeeze(Hsigma(i,k1,:)).*WJh(k1,j).*squeeze(WJh(:,l)))
-                    % becomes
-                    % sum(squeeze(Hsigma(i,i,i)).*WJh(i,j).*squeeze(WJh(i,l)))
-                    % and thus, accounting for storage sizes
-                    second_term_ijl = second_term_ijl + sum(squeeze(Hsigma(i)).*WJh(i,j).*squeeze(WJh(i,l)));
-                    hess(i,j,l) = first_term + second_term_ijl;
-                end
+                second_term_ijl = (squeeze(Hsigma(:)).*WJh(:,j).*squeeze(WJh(:,l)));
+                hess(:,j,l) = hess(:,j,l) + second_term_ijl;
+                
             end
         end
         
