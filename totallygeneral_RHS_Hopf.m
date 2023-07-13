@@ -168,7 +168,7 @@ for i = 1: size(solutions,1)*(validation~=0)
             negative_lyap(end+1)= l1;
             fprintf('%ith solution at %f is stable!\n',i, lambda_star)
         end
-        fprintf('   Lyapunov exponent: %f\n', l1.mid)
+        fprintf('   Lyapunov exponent: %f ± %e\n', l1.mid, l1.rad)
     catch
         not_proven = not_proven+1;
         unproven(end+1) = i;

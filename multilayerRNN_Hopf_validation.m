@@ -6,7 +6,7 @@
 % This code tests genral_RHS_Hopf for RNN with multiple layers
 %
 
-function nargout = multilayerRNN_Hopf_validation(dim, n_case, varargin)
+function [rightHandSide, solutions, unproven] = multilayerRNN_Hopf_validation(dim, n_case, varargin)
 
 if nargin == 0
     dim = [6, 6]; %for antysimmetry, we need same dimensions
@@ -17,7 +17,7 @@ R1 = cell(n_layers,1);
 R2 = cell(n_layers,1);
 
 for iter =1:n_layers
-    [~, R1_iter, R2_iter] = input_parse(dim(iter), varargin{:}); % change this line to change the system
+    [~, R1_iter, R2_iter,validation,bifurcation_diag] = input_parse(dim(iter), varargin{:}); % change this line to change the system
     R1{iter} = R1_iter; %  toeplitz(R1_iter(1,:)); 
     R2{iter} = R2_iter;
 end
@@ -32,7 +32,6 @@ switch n_case
             linearfunc{iter} = multilayer_lin_struct_asymRNN(dim(iter), R1{iter}, R2{iter});
         end
         nonlin = tanhnonlin();
-        nargout{1} = R1{1}; nargout{2} = R2{1};
         
         % unit_test_1layer();
         
@@ -69,8 +68,8 @@ switch n_case
     case 5
         disp('Example 5: tanh with a weight off-diag in asymRNN')
         dim = 6;
-        row = 3;
-        col = 6;
+        row = 4;
+        col = 3;
         gamma = 10^-2;
         
         linearfunc = cell(length(dim), 1);
@@ -95,16 +94,13 @@ switch n_case
 end
 
 out = allders(linearfunc, nonlin, dim);
+rightHandSide = out{2};
 
 if n_case == 2
     %unit_test_2layers()
 end
 
-[sol_tanh_asym, ~, ~, ~, ~, unproven] = totallygeneral_RHS_Hopf(dim(1), out);
-
-if n_case ==1
-    nargout{3} = sol_tanh_asym;
-end
+[solutions, ~, ~, ~, ~, unproven] = totallygeneral_RHS_Hopf(dim(1), out);
 
 % % second example: AsymmetricRNN w.r.t. a "Random" weight
 % disp('Example 3: tanh with a weight in asymRNN')
@@ -128,25 +124,28 @@ end
 
 bif_diag = figure;
 title('Bifurcation diagram')
+set(gca,'FontSize',16)
+xlabel('parameter','interpreter','latex','FontSize',21)
+ylabel('amplitude','interpreter','latex','FontSize',21)
 hold on
 
-for index = 1:size(sol_tanh_asym,1)
+for index = 1:size(solutions,1)
     if any(unproven == index)
         continue
     end
     
-    [xHopf, pHopf] = extractSol(sol_tanh_asym,index);
+    [xHopf, pHopf] = extractSol(solutions,index);
     fprintf('\n\nMatcont continuation at the Hopf bifurcation at parameter %f\n', pHopf)
     opt=contset;opt=contset(opt,'Singularities',1);
     opt = contset(opt,'MaxNumPoints',30);
-    [x0,v0]=init_EP_EP(@() all_ders(linearfunc, nonlin, dim),xHopf.',pHopf-.1,[1]);
+    [x0,v0]=init_EP_EP(@() all_ders(linearfunc, nonlin, dim),xHopf.',pHopf-.001,[1]);
     
     [x,v,s,h,f]=cont(@equilibrium,x0,[],opt);
     
     x1=x(1:dim,s(2).index);
     par=x(end,s(2).index);
     
-    opt = contset(opt,'MaxNumPoints',6300);
+    opt = contset(opt,'MaxNumPoints',600);
     [x0,v0]=init_H_LC(@() all_ders(linearfunc, nonlin, dim),x1,par,[1],1e-3,20,4);
     
     [xlc,vlc,slc,hlc,flc]=cont(@limitcycle,x0,v0,opt);
@@ -225,18 +224,19 @@ end
     function linfunc = lin_struct_asymRNN_weights(dim, R1, R2, gamma, row, col)
         linfunc = @linear_func;
         function [W, d_par_W] = linear_func()
-            if nargin < 2 || isempty(col)
+            if nargin < 2 && isempty(col)
                 col = floor(dim/3) +1;
             end
-            if nargin < 1 || isempty(row)
+            if nargin < 1 && isempty(row)
                 row = floor(dim/2)+1;
             end
             W_fixed = R1 - R1.' + gamma * eye(dim) + R2;
             
             W_ij = zeros(dim); 
             W_ij(row, col) = 1;
-            W_ij(col, row) = -1;
-            
+            if row ~= col
+                W_ij(col, row) = -1;
+            end
             W = @(a) W_fixed + a * W_ij;
             d_par_W = @(par) W_ij;
         end
@@ -307,10 +307,11 @@ end
 
 % INPUT PARSER
 
-    function [dim, R1, R2, validation] = input_parse(dim, varargin)
+    function [dim, R1, R2, validation, bif_diag] = input_parse(dim, varargin)
         defaultPerturbation = 0.1;
         defaultSeed = 80;
         defaultValidation = 1;
+        defaultBifurcation = 1;
         defaultR1 = zeros(dim, dim);
         defaultR2 = zeros(dim, dim);
         
@@ -320,6 +321,7 @@ end
         addRequired(p,'dimension',validInteger);
         addOptional(p,'perturbation',defaultPerturbation,validScalarPosNum);
         addOptional(p,'validation',defaultValidation,validInteger);
+        addOptional(p,'bifurcation',defaultBifurcation,validInteger);
         addOptional(p,'seed',defaultSeed,validInteger);
         validMatrix = @(x) isnumeric(x) && size(x,1) == dim && size(x,2) == dim && length(size(x))==2;
         addParameter(p,'R1',defaultR1,validMatrix);
@@ -327,6 +329,7 @@ end
         parse(p,dim,varargin{:});
         perturbation = p.Results.perturbation;
         validation = p.Results.validation;
+        bif_diag = p.Results.bifurcation;
         seed = p.Results.seed;
         R1 = p.Results.R1;
         R2 = p.Results.R2;
