@@ -180,8 +180,7 @@ out{9} = [];
             first_term_l = JsigmaW * Hin_l;
             hess(:,:,l) = first_term_l;
             for j = 1:n
-                second_term_ijl = (squeeze(Hsigma(:)).*WJh(:,j).*squeeze(WJh(:,l)));
-                hess(:,j,l) = hess(:,j,l) + second_term_ijl;
+                hess(:,j,l) = hess(:,j,l) + (squeeze(Hsigma(:)).*WJh(:,j).*squeeze(WJh(:,l)));
                 
             end
         end
@@ -236,35 +235,26 @@ out{9} = [];
         third_der_dir = zeros(dim_out,dim_in); % d3g Wdhv Wdhw Wdh
         if isintval(x) || isintval(par) || isintval(Wdh)
             
+        term_second_der = zeros(dim_in,1);
         third_der_dir = intval(third_der_dir); % d3g Wdhv Wdhw Wdh
             Wddhv = intval(Wddhv);
             Wddhw = intval(Wddhw);
+            term_second_der = intval(term_second_der);
         end
         
         Wdddhvw = Wf * d_xxx_in_vw(x, par,v,w);
-        for i = 1:dim_out
-            term_second_der = zeros(dim_in,1);
-            for j = 1:dim_in
-                for k = 1:dim_in
-                    new_term = sum(squeeze(Wf(i,:)).' .* squeeze(Dxxh(:,j,k)));
-                    Wddhv(i,k) = Wddhv(i,k) + new_term * v(j) + new_term * w(j);
-                end
-                
-                term_second_der = term_second_der + squeeze(Dxxh(:,i,j)).*v(i).*w(j);
-            end
+        
+        for k = 1:dim_in
+            Wddhv(:,k) = Wf * squeeze(Dxxh(:,:,k)) * (v + w);
+            term_second_der(k) = term_second_der(k) + v.' * squeeze(Dxxh(k,:,:))*w;
         end
         Wddhvw = Wf * term_second_der;
         dim_out = size(Dxxx_sigma,1);
         
         for k = 1:dim_out
-            for  l = 1:dim_in
-                %for i = 1:dim_out % possible because sigma acts element wise!
-                i = k;
-                third_der_dir(k,l) = third_der_dir(k,l) + Dxxx_sigma(k)* Wdhv(i)* Wdhw(i) * Wdh(i,l)+ ...
-                        Dxx_sigma(k) * Wdhv(i)* Wddhw(i,l) + Dxx_sigma(k) * Wdhw(i)* Wddhv(i,l)+ ...
-                        Dxx_sigma(k) * Wdh(l)* Wddhvw(i) + D_sigma(k) * Wdddhvw(i,l);
-                %end
-            end
+            third_der_dir(k,:) = third_der_dir(k,:) + Dxxx_sigma(k)* Wdhv(k)* Wdhw(k) * Wdh(k,:)+ ...
+                        Dxx_sigma(k) * Wdhv(k)* Wddhw(k,:) + Dxx_sigma(k) * Wdhw(k)* Wddhv(k,:)+ ...
+                        Dxx_sigma(k) * Wdh(k,:)* Wddhvw(k) + D_sigma(k) * Wdddhvw(k,:);
         end
         
     end
