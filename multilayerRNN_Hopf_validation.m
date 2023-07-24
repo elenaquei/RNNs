@@ -100,7 +100,7 @@ if n_case == 2
     %unit_test_2layers()
 end
 
-[solutions, ~, ~, ~, ~, unproven] = totallygeneral_RHS_Hopf(dim(1), out);
+[solutions, ~, ~, ~, ~, unproven] = totallygeneral_RHS_Hopf(dim(1), out, validation);
 
 % % second example: AsymmetricRNN w.r.t. a "Random" weight
 % disp('Example 3: tanh with a weight in asymRNN')
@@ -121,15 +121,18 @@ end
 % nonlin = tanhnonlin();
 % general_RHS_Hopf(dim, nonlin, linearfunc);
 
-
+if bifurcation_diag
 bif_diag = figure;
 title('Bifurcation diagram')
 set(gca,'FontSize',16)
 xlabel('parameter','interpreter','latex','FontSize',21)
 ylabel('amplitude','interpreter','latex','FontSize',21)
 hold on
-
-for index = 1:size(solutions,1)
+all_pars = solutions(:,1);
+all_validated_pars = all_pars; all_validated_pars(unproven) = [];
+plot(all_validated_pars, 0*all_validated_pars, '*', 'MarkerSize', 4);
+end
+for index = 1:size(solutions,1)*bifurcation_diag
     if any(unproven == index)
         continue
     end
@@ -138,14 +141,14 @@ for index = 1:size(solutions,1)
     fprintf('\n\nMatcont continuation at the Hopf bifurcation at parameter %f\n', pHopf)
     opt=contset;opt=contset(opt,'Singularities',1);
     opt = contset(opt,'MaxNumPoints',30);
-    [x0,v0]=init_EP_EP(@() all_ders(linearfunc, nonlin, dim),xHopf.',pHopf-.001,[1]);
+    [x0,v0]=init_EP_EP(@() all_ders(linearfunc, nonlin, dim),xHopf.',pHopf-10^-4,[1]);
     
     [x,v,s,h,f]=cont(@equilibrium,x0,[],opt);
     
     x1=x(1:dim,s(2).index);
     par=x(end,s(2).index);
     
-    opt = contset(opt,'MaxNumPoints',600);
+    opt = contset(opt,'MaxNumPoints',300);
     [x0,v0]=init_H_LC(@() all_ders(linearfunc, nonlin, dim),x1,par,[1],1e-3,20,4);
     
     [xlc,vlc,slc,hlc,flc]=cont(@limitcycle,x0,v0,opt);

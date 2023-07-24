@@ -28,7 +28,7 @@ function [solutions, positive_lyap_index, negative_lyap_index, positive_lyap, ne
 %               par, eigenval_imag, x, eigenvec_real, eigenvec_imag
 % positive_lyap_index, negative_lyap_index, positive_lyap, negative_lyap, unproven
 
-if nargin < 4 || isempty(validation)
+if nargin < 3 || isempty(validation)
     validation = 1;
 end
 
