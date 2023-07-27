@@ -65,6 +65,7 @@ end
 
 [rhs, sol]=multilayerRNN_Hopf_validation([6,6,6],2, 'perturbation', 0.1, 'seed', 80, 'validation', 1);
 title('')
+axis([-0.15, 0.05, 0, 1.25])
 if save_fig
     saveas(gcf,'bifurcation_diagram_multilayer','epsc')
 end
