@@ -8,6 +8,7 @@ A first time user should look at the examples provided in the paper and encoded 
 The definition of the network structure and activation functions in given in multilayerRNN_Hopf_validation
 The backpropagation of the derivatives is implemented in allders
 The validation of Hopf bifurcations is coded in algebraic_hopf_simple, where simple refers to the use of derivatives only up to order 3. This code is extremely general.
+Additional files are left as utility functions for the expert user.
 
 Comments and bug reports are welcome and can be forwarded directly to: elena.queirolo@tum.de
 Use of this code should be cited by citing the companion paper.

@@ -30,10 +30,10 @@ end
 % not in the paper
 
 % ONLY ONCE
-%[rhs, sol]=multilayerRNN_Hopf_validation(400, 1, 'perturbation', 0.1, 'seed', 80, 'validation', 1, 'bifurcation', 0); % change to validation
-%[fig_divergent, fig_transient] =visualisation_asym_RHS_Hopf(sol, 80, rhs);
-%saveas(fig_transient,'dim400_transient','epsc')
-%saveas(fig_divergent,'dim400_divergent','epsc')
+[rhs, sol]=multilayerRNN_Hopf_validation(400, 1, 'perturbation', 0.1, 'seed', 80, 'validation', 1, 'bifurcation', 0); % change to validation
+[fig_divergent, fig_transient] =visualisation_asym_RHS_Hopf(sol, 80, rhs);
+saveas(fig_transient,'dim400_transient','epsc')
+saveas(fig_divergent,'dim400_divergent','epsc')
 
 [rhs, sol, unproven]=multilayerRNN_Hopf_validation(50, 1,'perturbation', 0.1, 'seed', 120, 'validation', 1, 'bifurcation', 0);
 [fig_divergent, fig_transient] = visualisation_asym_RHS_Hopf(sol, 120, rhs, unproven(1));
