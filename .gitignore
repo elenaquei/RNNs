@@ -6,3 +6,5 @@
 start_matcont_QUEIROLO.m
 
 *.m~
+
+.idea/
