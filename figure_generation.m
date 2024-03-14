@@ -1,5 +1,5 @@
 % figure generation for paper "PLACEHOLDER',  E. Queirolo, C. Kuehn
-addpath '/Users/queirolo/Desktop/MatCont7p3'
+addpath '/Users/queirolo/Desktop/Research/packages/MatCont7p3'
 init();
 
 

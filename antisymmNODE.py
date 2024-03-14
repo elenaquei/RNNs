@@ -54,7 +54,7 @@ plotlim = [-3, 3]
 subfolder = 'traj_moons'
 
 
-from models.training import create_dataloader
+from nODE_models.training import create_dataloader
 dataloader, dataloader_viz = create_dataloader('moons', noise = data_noise, plotlim = plotlim, random_state = seed)
 
 
@@ -62,7 +62,7 @@ dataloader, dataloader_viz = create_dataloader('moons', noise = data_noise, plot
 # ## Training and generating level sets
 
 # %%
-from models.neural_odes import convolutionalNeuralODE
+from nODE_models.neural_odes import convolutionalNeuralODE
 
 hidden_dim = 10
 data_dim = 2 
@@ -91,14 +91,14 @@ optimizer_cnode = torch.optim.Adam(cnode.parameters(), lr=1e-3)
 
 
 # %%
-from models.training import convolutionalTrainer
+from nODE_models.training import convolutionalTrainer
 
 trainer_cnode = convolutionalTrainer(cnode, optimizer_cnode, device, cross_entropy=cross_entropy,
                         verbose = True, antisymm_diag = .03) 
 trainer_cnode.train(dataloader, num_epochs)
 
 # %%
-from plots.plots import classification_levelsets
+from nODE_plots.plots import classification_levelsets
 classification_levelsets(cnode)
 plt.plot(trainer_cnode.histories['epoch_loss_history'])
 plt.xlim(0, len(trainer_cnode.histories['epoch_loss_history']) - 1)
