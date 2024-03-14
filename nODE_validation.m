@@ -23,6 +23,8 @@ W = W - diag(diag(W));
 R2 = W - R1 + R1.';
 R2 = R2 + diag(diag_pert);
 
+R2 = R2 * 10;
+
 if dim < 30
     bifurcation_diag = 1;
 else
@@ -83,6 +85,7 @@ for index = 1:size(solutions,1)*bifurcation_diag
     M=max(xlc(1:dim:end-2,:));
     plot(xlc(end,:),M, 'LineWidth',2)
     xlim auto; ylim auto;
+    xlim([0.297, 0.302])
     saveas(bif_diag, 'bifurcation_diag', 'epsc')
 end
 saveas(f, 'example_branch', 'epsc')
